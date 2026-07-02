@@ -17,9 +17,7 @@ The project combines:
 
 ## Repository description for GitHub
 
-**Suggested repository description:**
-
-> MScFE 690 capstone research codebase for ML-enhanced equity pairs trading, synthetic market-regime robustness testing, cointegration-based statistical arbitrage, ML trade filtering, and risk-aware backtesting.
+MScFE 690 capstone research codebase for ML-enhanced equity pairs trading, synthetic market-regime robustness testing, cointegration-based statistical arbitrage, ML trade filtering, and risk-aware backtesting.
 
 ## Repository structure
 
@@ -123,22 +121,6 @@ Edit `config/config.yaml` to change:
 
 This repository is an **initial capstone research implementation**. It is not a production trading system. The current focus is to support the literature review, competitor analysis, initial findings, and reproducible research workflow. Future milestones include expanding robustness tests, improving model validation, adding additional metrics, and optionally adding a deeper sequential model.
 
-## Suggested GitHub repository name
-
-```text
-mscf-690-ml-enhanced-pairs-trading
-```
-
-## Suggested first commit
-
-```bash
-git init
-git add .
-git commit -m "Initial capstone research codebase"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/mscf-690-ml-enhanced-pairs-trading.git
-git push -u origin main
-```
 
 ## Academic note
 
