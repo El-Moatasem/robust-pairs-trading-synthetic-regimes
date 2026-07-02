@@ -1,0 +1,48 @@
+project:
+  name: "ML-Enhanced Robust Equity Pairs Trading under Synthetic Market Regimes"
+  track: "Track 8 - Machine Learning (Deep) Investment Strategies"
+
+data:
+  use_sample_data: true
+  source: "yfinance"
+  tickers: ["KO", "PEP", "XOM", "CVX", "MSFT", "AAPL", "JPM", "BAC"]
+  start_date: "2018-01-01"
+  end_date: "2025-12-31"
+  price_field: "Adj Close"
+
+pair_selection:
+  min_abs_correlation: 0.70
+  max_cointegration_pvalue: 0.10
+  top_n_pairs: 5
+
+features:
+  zscore_window: 30
+  volatility_window: 30
+  correlation_window: 60
+  half_life_max: 120
+
+strategy:
+  entry_z: 2.0
+  exit_z: 0.5
+  stop_z: 3.5
+  max_holding_days: 20
+  transaction_cost_bps: 5
+
+ml:
+  models: ["logistic_regression", "random_forest"]
+  probability_threshold: 0.55
+  test_size: 0.30
+  random_state: 42
+
+synthetic:
+  n_scenarios: 50
+  n_steps: 252
+  base_mean_reversion: 0.08
+  base_volatility: 1.0
+  jump_probability: 0.02
+  jump_scale: 2.5
+  correlation_break_probability: 0.10
+
+outputs:
+  tables_dir: "outputs/tables"
+  figures_dir: "outputs/figures"
