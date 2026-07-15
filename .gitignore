@@ -1,11 +1,26 @@
-.venv/
+# Python
 __pycache__/
-*.pyc
-.DS_Store
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+# Environments
+.venv/
+venv/
+env/
+local_directory/
 .env
+
+# OS / IDE
+.DS_Store
+__MACOSX/
+.idea/
+.vscode/
 .ipynb_checkpoints/
-data/raw/*.csv
-data/processed/*.csv
-outputs/figures/*.png
-outputs/tables/*.csv
-outputs/*.log
+
+# Optional large data/cache files
+outputs/cache/
+data/raw/*.zip
+data/raw/*.parquet
+data/processed/*.parquet

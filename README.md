@@ -1,92 +1,63 @@
-# MScFE 690: ML-Enhanced Robust Equity Pairs Trading under Synthetic Market Regimes
+# ML-Enhanced Robust Equity Pairs Trading under Synthetic Market Regimes
 
-This repository contains the capstone research codebase for **ML-Enhanced Robust Equity Pairs Trading under Synthetic Market Regimes** under **Track 8 - Machine Learning (Deep) Investment Strategies**.
+This repository contains the MScFE 690 capstone research codebase for **ML-enhanced robust equity pairs trading under synthetic market regimes**.
 
-## Project summary
+The project investigates whether machine learning and optional deep learning can improve a classical equity/ETF pairs-trading strategy by acting as a **decision filter**. The goal is not to predict raw prices directly, but to decide whether a statistical trade signal should be accepted, rejected, or treated as a possible warning of regime breakdown.
 
-Classical equity pairs trading assumes that two economically related securities maintain a stable spread and that temporary deviations will mean-revert. In practice, many apparent spread deviations are caused by volatility shocks, correlation breakdowns, liquidity changes, regime shifts, news-driven repricing, or transaction costs. This project studies whether machine learning and optional deep learning can improve a classical pairs-trading strategy by acting as a **decision layer** that accepts, rejects, or flags trade signals.
+## Current status
 
-The project combines:
+This is a **Module 3 / project-proposal-stage codebase**, not the final capstone implementation. It is further developed from the previous Module 2 work and includes runnable code, preliminary outputs, figures, documentation, and archived notes from earlier submissions. The final capstone stage should later replace or supplement these temporary results with final historical-data runs, expanded robustness tests, and final conclusions.
 
-- Classical statistical arbitrage and pairs trading.
-- Cointegration and spread-based baseline modeling.
-- ML trade filtering using logistic regression, random forest, and optional XGBoost.
-- Optional DL/regime modules such as LSTM, GRU, or autoencoder-based anomaly detection.
-- Synthetic market scenarios for robustness testing under volatility, jump, correlation-breakdown, mean-reversion, slippage, and transaction-cost regimes.
-- Model, trading, risk, robustness, and interpretability metrics.
+## Research idea
 
-## Repository description for GitHub
+Classical pairs trading can produce false signals when spread deviations are caused by volatility shocks, correlation breaks, liquidity changes, news-driven repricing, or transaction costs. This project combines:
 
-MScFE 690 capstone research codebase for ML-enhanced equity pairs trading, synthetic market-regime robustness testing, cointegration-based statistical arbitrage, ML trade filtering, and risk-aware backtesting.
+1. A classical cointegration/correlation-based pairs-trading baseline.
+2. Feature engineering around spread stability, mean reversion, volatility, correlation, and drawdown.
+3. Supervised ML accept/reject trade filters.
+4. Synthetic regime generation for robustness testing.
+5. Out-of-sample backtesting with transaction costs and slippage assumptions.
+
+## Data frequency
+
+The initial reproducible baseline uses **daily public equity/ETF adjusted close prices**. The code can attempt to use `yfinance`, but the default configuration uses an offline synthetic daily data generator so that instructors can run the project without internet access.
 
 ## Repository structure
 
 ```text
-.
-├── config/
-│   └── config.yaml                  # Main experiment configuration
-├── data/
-│   ├── raw/                         # Raw downloaded or user-provided data
-│   └── processed/                   # Cleaned feature datasets
-├── docs/
-│   ├── initial_findings_template.md # Temporary-results report template
-│   └── literature_competitor_notes.md
-├── notebooks/
-│   └── README.md                    # Notebook guidance
-├── outputs/
-│   ├── figures/                     # Generated charts
-│   └── tables/                      # Generated CSV summaries
-├── scripts/
-│   └── run_smoke_test.py            # Quick verification script
-├── src/
-│   ├── data.py                      # Data download/load/cleaning
-│   ├── diagnostics.py               # ADF, cointegration, residual tests
-│   ├── pairs.py                     # Pair screening and ranking
-│   ├── features.py                  # Hedge ratio, spread, z-score, half-life features
-│   ├── labels.py                    # Trade label construction
-│   ├── backtest.py                  # Baseline and ML-filtered strategy backtests
-│   ├── models.py                    # ML trade-filter models
-│   ├── synthetic.py                 # Synthetic regime generation
-│   ├── evaluation.py                # Model/trading/risk metrics
-│   ├── reporting.py                 # Tables, summaries, and export helpers
-│   └── visualization.py             # Figure creation helpers
-├── tests/
-│   └── test_smoke.py                # Lightweight unit tests
-├── run_pipeline.py                  # End-to-end research pipeline
-├── single_file_demo.py              # Self-contained demo for copy/paste testing
-├── requirements.txt
-└── README.md
+config/config.yaml                            Main experiment configuration
+run_pipeline.py                               Full research pipeline
+single_file_demo.py                           Minimal offline demo
+src/data.py                                   Data loading and synthetic daily price generation
+src/pairs.py                                  Correlation, cointegration, hedge ratio, pair screening
+src/features.py                               Spread, z-score, volatility, correlation, drawdown, half-life features
+src/labels.py                                 Accept/reject labels based on convergence after costs
+src/models.py                                 Logistic regression, random forest, optional XGBoost/fallback boosting filters
+src/backtest.py                               Baseline and ML-filtered backtests
+src/synthetic.py                              Synthetic market-regime spread scenarios
+src/diagnostics.py                            Legacy / optional diagnostics helpers from previous work
+src/reporting.py                              Legacy / optional reporting helpers from previous work
+src/evaluation.py                             Initial inference text generation
+src/visualization.py                          Figures for equity curves, scenario volatility, feature importance
+outputs/                                      Generated tables, figures, and findings
+docs/MODULE3_CHANGES.md                       Summary of Module 3 code development
+docs/RUN_INSTRUCTIONS.md                      Command-line run instructions
+docs/CODE_HIGHLIGHTS.md                       Important code sections to highlight in the report
+docs/module2_archive/                         Preserved Module 2 notes and templates
+scripts/run_smoke_test.py                     Smoke test for reproducibility
+tests/test_smoke.py                           Pytest smoke test
+CONTRIBUTORS.md                               Contributor list
+requirements.txt                              Python dependencies
 ```
-
-## Important code sections to highlight in the report
-
-| File | Why it matters |
-|---|---|
-| `src/pairs.py` | Screens candidate equity/ETF pairs using correlation and cointegration diagnostics. |
-| `src/features.py` | Constructs spreads, hedge ratios, z-scores, rolling volatility/correlation, drawdown, and half-life features. |
-| `src/labels.py` | Converts historical trading signals into ML targets such as accept/reject or probability of convergence. |
-| `src/models.py` | Trains logistic regression, random forest, and optional XGBoost trade-filter models. |
-| `src/backtest.py` | Compares classical baseline, risk-aware baseline, and ML-filtered strategy variants after transaction costs. |
-| `src/synthetic.py` | Generates synthetic spread regimes for robustness testing under volatility, jumps, correlation breakdowns, mean reversion, slippage, and costs. |
-| `run_pipeline.py` | Runs the full research workflow and exports initial findings. |
 
 ## Setup
 
-Create a virtual environment and install dependencies:
-
 ```bash
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+source .venv/bin/activate  # Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
-
-## Run a smoke test
-
-```bash
-python scripts/run_smoke_test.py
-```
-
-This uses generated sample data and verifies that the main modules work without requiring internet access.
 
 ## Run the full pipeline
 
@@ -94,34 +65,59 @@ This uses generated sample data and verifies that the main modules work without 
 python run_pipeline.py --config config/config.yaml
 ```
 
-The pipeline will:
+The outputs are written to:
 
-1. Load public price data if available, or generate a synthetic sample if `use_sample_data: true` is enabled.
-2. Screen candidate pairs.
-3. Build spread and regime features.
-4. Generate baseline pairs-trading signals.
-5. Build ML labels.
-6. Train ML trade filters.
-7. Run baseline and ML-filtered backtests.
-8. Generate synthetic market-regime scenarios.
-9. Export tables and figures into `outputs/`.
+```text
+outputs/tables/
+outputs/figures/
+outputs/initial_findings.md
+```
 
-## Configuration
+## Run the minimal demo
 
-Edit `config/config.yaml` to change:
+```bash
+python single_file_demo.py
+```
 
-- Tickers and date range.
-- Pair-screening thresholds.
-- Entry/exit z-score thresholds.
-- Transaction costs.
-- ML model selection.
-- Synthetic-regime parameters.
+## Run smoke tests
 
-## Current status
+```bash
+python scripts/run_smoke_test.py
+```
 
-This repository is an **initial capstone research implementation**. It is not a production trading system. The current focus is to support the literature review, competitor analysis, initial findings, and reproducible research workflow. Future milestones include expanding robustness tests, improving model validation, adding additional metrics, and optionally adding a deeper sequential model.
+or with pytest:
 
+```bash
+python -m pytest tests
+```
+
+## Initial results included
+
+The repository includes preliminary outputs produced from reproducible sample data. These outputs demonstrate that the code can:
+
+- screen candidate pairs,
+- construct spread features,
+- build ML labels,
+- train ML filters,
+- backtest baseline and ML-filtered strategies,
+- generate synthetic stress scenarios,
+- create charts with axes and labels,
+- export temporary results for the report.
+
+## Important code sections for the report
+
+See `docs/CODE_HIGHLIGHTS.md` for a report-ready list of the most important source-code modules.
+
+## GitHub submission note
+
+For the course submission, upload the contents of this folder to the GitHub repository:
+
+```text
+https://github.com/El-Moatasem/robust-pairs-trading-synthetic-regimes
+```
+
+Then make sure the professor has read access to the repository.
 
 ## Academic note
 
-The repository supports a research workflow only. It does not provide investment advice, live trading recommendations, or a production-ready trading platform.
+The included results are **temporary** and should not be interpreted as final investment performance or investment advice. They are included to show project progress, source-code development, and initial inferences for the Module 3 project proposal submission.

@@ -2,115 +2,87 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-import yaml
+
 import pandas as pd
 
-from src.data import DataConfig, get_price_data
-from src.pairs import screen_candidate_pairs
-from src.features import construct_pair_features
-from src.backtest import generate_baseline_signals, backtest_pair_strategy, apply_ml_filter
-from src.labels import build_convergence_labels, get_model_dataset
-from src.models import train_trade_filters
-from src.evaluation import flatten_model_metrics, compare_strategy_metrics
-from src.synthetic import generate_synthetic_scenarios, scenario_summary
-from src.reporting import ensure_output_dirs, save_table, write_initial_findings_markdown
-from src.visualization import plot_equity_curve, plot_scenario_distribution
+from src.backtest import backtest_zscore, summarize_backtest
+from src.data import load_public_or_synthetic_data
+from src.evaluation import make_initial_inferences
+from src.features import build_feature_frame
+from src.labels import build_convergence_labels
+from src.models import train_models
+from src.pairs import screen_pairs, select_top_pair
+from src.synthetic import generate_synthetic_spreads, summarize_scenarios
+from src.utils import ensure_dirs, load_config, save_json, set_seed
+from src.visualization import plot_equity_curve, plot_scenario_volatility, plot_feature_importance
 
 
-def load_config(path: str | Path) -> dict:
-    with open(path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Run ML-enhanced pairs-trading capstone pipeline.")
+    parser.add_argument("--config", default="config/config.yaml", help="Path to YAML config file.")
+    args = parser.parse_args()
 
+    cfg = load_config(args.config)
+    set_seed(int(cfg["project"].get("random_seed", 42)))
+    dirs = ensure_dirs(cfg["outputs"]["dir"])
 
-def main(config_path: str) -> None:
-    cfg = load_config(config_path)
-    tables_dir, figures_dir = ensure_output_dirs(cfg["outputs"]["tables_dir"], cfg["outputs"]["figures_dir"])
+    prices, data_summary = load_public_or_synthetic_data(cfg)
+    prices.to_csv(dirs["tables"] / "prices_sample.csv")
+    save_json(data_summary.__dict__, dirs["tables"] / "data_summary.json")
 
-    data_cfg = DataConfig(
-        tickers=cfg["data"]["tickers"],
-        start_date=cfg["data"].get("start_date", "2018-01-01"),
-        end_date=cfg["data"].get("end_date", "2025-12-31"),
-        price_field=cfg["data"].get("price_field", "Adj Close"),
-        use_sample_data=cfg["data"].get("use_sample_data", True),
-        random_state=cfg["ml"].get("random_state", 42),
-    )
-    prices = get_price_data(data_cfg)
-    prices.to_csv(tables_dir / "price_panel.csv")
-
-    pairs = screen_candidate_pairs(
+    pair_table = screen_pairs(
         prices,
-        min_abs_correlation=cfg["pair_selection"]["min_abs_correlation"],
-        max_cointegration_pvalue=cfg["pair_selection"]["max_cointegration_pvalue"],
-        top_n=cfg["pair_selection"]["top_n_pairs"],
+        min_abs_corr=float(cfg["pair_selection"]["min_abs_corr"]),
+        max_pvalue=float(cfg["pair_selection"]["max_cointegration_pvalue"]),
+        top_n=int(cfg["pair_selection"]["top_n"]),
     )
-    save_table(pairs, tables_dir / "candidate_pairs.csv")
-    if pairs.empty:
-        raise RuntimeError("No candidate pairs found. Lower thresholds or change universe.")
+    pair_table.to_csv(dirs["tables"] / "candidate_pairs.csv", index=False)
+    asset_a, asset_b, hedge_ratio = select_top_pair(pair_table)
 
-    first_pair = pairs.iloc[0]
-    features = construct_pair_features(
-        prices,
-        first_pair["asset_a"],
-        first_pair["asset_b"],
-        zscore_window=cfg["features"]["zscore_window"],
-        volatility_window=cfg["features"]["volatility_window"],
-        correlation_window=cfg["features"]["correlation_window"],
-    )
-    features.to_csv(tables_dir / "features_first_pair.csv")
+    features = build_feature_frame(prices, asset_a, asset_b, cfg, hedge_ratio)
+    features.to_csv(dirs["tables"] / "feature_frame.csv")
+    labels = build_convergence_labels(features, cfg)
+    labels.to_csv(dirs["tables"] / "labels.csv")
 
-    signals = generate_baseline_signals(
-        features,
-        entry_z=cfg["strategy"]["entry_z"],
-        exit_z=cfg["strategy"]["exit_z"],
-        stop_z=cfg["strategy"]["stop_z"],
-    )
-    baseline_bt, baseline_metrics = backtest_pair_strategy(signals, cfg["strategy"]["transaction_cost_bps"])
-    baseline_bt.to_csv(tables_dir / "baseline_backtest.csv")
-    plot_equity_curve(baseline_bt, figures_dir / "baseline_equity_curve.png", "Baseline Pairs-Trading Equity Curve")
+    bundles, model_metrics, predictions = train_models(features, labels, cfg)
+    model_metrics.to_csv(dirs["tables"] / "model_metrics.csv", index=False)
+    predictions.to_csv(dirs["tables"] / "model_predictions.csv")
 
-    labeled = build_convergence_labels(signals, exit_z=cfg["strategy"]["exit_z"], max_holding_days=cfg["strategy"]["max_holding_days"])
-    X, y = get_model_dataset(labeled)
-    model_results = train_trade_filters(
-        X,
-        y,
-        model_names=cfg["ml"]["models"],
-        test_size=cfg["ml"]["test_size"],
-        random_state=cfg["ml"]["random_state"],
-    )
-    model_metrics = flatten_model_metrics(model_results)
-    save_table(model_metrics, tables_dir / "model_metrics.csv")
+    baseline = backtest_zscore(features, cfg)
+    baseline.to_csv(dirs["tables"] / "backtest_baseline.csv")
 
-    strategy_metrics = {"baseline": baseline_metrics}
-    # Run one ML-filtered strategy if model probabilities are available.
-    for model_name, payload in model_results.items():
-        if isinstance(payload, dict) and "probabilities" in payload:
-            filtered = apply_ml_filter(signals, payload["probabilities"], threshold=cfg["ml"]["probability_threshold"])
-            filtered_bt, filtered_metrics = backtest_pair_strategy(filtered, cfg["strategy"]["transaction_cost_bps"])
-            strategy_metrics[f"ml_filtered_{model_name}"] = filtered_metrics
-            filtered_bt.to_csv(tables_dir / f"ml_filtered_{model_name}_backtest.csv")
-            break
-    strategy_metrics_df = compare_strategy_metrics(strategy_metrics)
-    save_table(strategy_metrics_df, tables_dir / "strategy_metrics.csv")
+    # Use the best F1 model for ML-filtered backtest.
+    best_model_name = model_metrics.sort_values("f1", ascending=False).iloc[0]["model"]
+    accept_col = f"{best_model_name}_accept"
+    accept_filter = predictions[accept_col]
+    ml_filtered = backtest_zscore(features, cfg, accept_filter=accept_filter)
+    ml_filtered.to_csv(dirs["tables"] / "backtest_ml_filtered.csv")
 
-    scenarios = generate_synthetic_scenarios(
-        n_scenarios=cfg["synthetic"]["n_scenarios"],
-        n_steps=cfg["synthetic"]["n_steps"],
-        base_mean_reversion=cfg["synthetic"]["base_mean_reversion"],
-        base_volatility=cfg["synthetic"]["base_volatility"],
-        jump_probability=cfg["synthetic"]["jump_probability"],
-        jump_scale=cfg["synthetic"]["jump_scale"],
-        random_state=cfg["ml"]["random_state"],
-    )
-    scen_summary = scenario_summary(scenarios)
-    save_table(scen_summary, tables_dir / "synthetic_scenario_summary.csv")
-    plot_scenario_distribution(scen_summary, figures_dir / "synthetic_scenario_volatility.png")
+    strategy_metrics = pd.DataFrame([
+        summarize_backtest(baseline, "Baseline z-score"),
+        summarize_backtest(ml_filtered, f"ML-filtered ({best_model_name})"),
+    ])
+    strategy_metrics.to_csv(dirs["tables"] / "strategy_metrics.csv", index=False)
 
-    write_initial_findings_markdown(base_path := Path("outputs") / "initial_findings.md", pairs, model_metrics, strategy_metrics_df)
-    print(f"Pipeline complete. Tables saved to {tables_dir}; figures saved to {figures_dir}; initial findings saved to {base_path}")
+    scenarios = generate_synthetic_spreads(features["spread"], cfg)
+    scenarios.to_csv(dirs["tables"] / "synthetic_scenarios.csv")
+    scenario_summary = summarize_scenarios(scenarios)
+    scenario_summary.to_csv(dirs["tables"] / "synthetic_scenario_summary.csv", index=False)
+
+    plot_equity_curve(baseline, dirs["figures"] / "baseline_equity_curve.png", "Baseline Pairs-Trading Equity Curve")
+    plot_equity_curve(ml_filtered, dirs["figures"] / "ml_filtered_equity_curve.png", "ML-Filtered Pairs-Trading Equity Curve")
+    plot_scenario_volatility(scenario_summary, dirs["figures"] / "synthetic_scenario_volatility.png")
+    plot_feature_importance(bundles[best_model_name].feature_importance, dirs["figures"] / "feature_importance.png", f"Feature Importance: {best_model_name}")
+
+    with open(dirs["base"] / "initial_findings.md", "w", encoding="utf-8") as f:
+        f.write(make_initial_inferences(strategy_metrics, model_metrics, scenario_summary))
+
+    print("Pipeline completed successfully.")
+    print(f"Data source: {data_summary.source}")
+    print(f"Selected pair: {asset_a}-{asset_b}, hedge ratio={hedge_ratio:.4f}")
+    print(f"Best model: {best_model_name}")
+    print(f"Outputs written to: {dirs['base'].resolve()}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run MScFE 690 capstone research pipeline")
-    parser.add_argument("--config", default="config/config.yaml", help="Path to YAML config")
-    args = parser.parse_args()
-    main(args.config)
+    main()

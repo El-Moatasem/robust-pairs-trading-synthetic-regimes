@@ -22,4 +22,4 @@
 
 Replace with the actual GitHub or BitBucket URL after creating the repository:
 
-`https://github.com/YOUR_USERNAME/mscf-690-ml-enhanced-pairs-trading`
+`https://github.com/El-Moatasem/robust-pairs-trading-synthetic-regimes`

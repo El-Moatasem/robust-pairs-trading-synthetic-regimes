@@ -1,0 +1,8 @@
+{
+  "source": "offline_reproducible_synthetic_daily_prices",
+  "frequency": "daily",
+  "n_assets": 10,
+  "n_observations": 900,
+  "start": "2021-01-01",
+  "end": "2024-06-13"
+}

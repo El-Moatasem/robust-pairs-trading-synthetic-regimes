@@ -1,10 +1,12 @@
-numpy>=1.24
-pandas>=2.0
-scipy>=1.10
-scikit-learn>=1.3
-statsmodels>=0.14
+numpy>=1.23
+pandas>=1.5
 matplotlib>=3.7
+scikit-learn>=1.2
+statsmodels>=0.14
 PyYAML>=6.0
-yfinance>=0.2
-xgboost>=2.0
+joblib>=1.2
 pytest>=7.0
+# Optional for live public data download. The pipeline falls back to offline synthetic data.
+yfinance>=0.2
+# Optional model. The code falls back to scikit-learn GradientBoostingClassifier if xgboost is unavailable.
+xgboost>=1.7

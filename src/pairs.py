@@ -1,48 +1,60 @@
 from __future__ import annotations
 
 from itertools import combinations
+from typing import Tuple
+
 import numpy as np
 import pandas as pd
-from .diagnostics import engle_granger_coint, phillips_ouliaris_proxy, estimate_hedge_ratio
+from statsmodels.tsa.stattools import coint, adfuller
 
 
-def compute_return_correlation(prices: pd.DataFrame) -> pd.DataFrame:
+def estimate_hedge_ratio(y: pd.Series, x: pd.Series) -> float:
+    x_vals = np.asarray(x, dtype=float)
+    y_vals = np.asarray(y, dtype=float)
+    beta = np.cov(y_vals, x_vals)[0, 1] / np.var(x_vals)
+    return float(beta)
+
+
+def build_spread(y: pd.Series, x: pd.Series, hedge_ratio: float) -> pd.Series:
+    spread = np.log(y) - hedge_ratio * np.log(x)
+    return pd.Series(spread, index=y.index, name=f"spread_{y.name}_{x.name}")
+
+
+def screen_pairs(prices: pd.DataFrame, min_abs_corr: float = 0.55, max_pvalue: float = 0.10, top_n: int = 8) -> pd.DataFrame:
     returns = prices.pct_change().dropna()
-    return returns.corr()
-
-
-def screen_candidate_pairs(
-    prices: pd.DataFrame,
-    min_abs_correlation: float = 0.70,
-    max_cointegration_pvalue: float = 0.10,
-    top_n: int = 10,
-) -> pd.DataFrame:
-    """Rank candidate pairs by correlation and cointegration diagnostics."""
-    corr = compute_return_correlation(prices)
     rows = []
     for a, b in combinations(prices.columns, 2):
-        abs_corr = abs(float(corr.loc[a, b]))
-        if abs_corr < min_abs_correlation:
+        aligned = prices[[a, b]].dropna()
+        if len(aligned) < 100:
             continue
-        eg = engle_granger_coint(prices[a], prices[b])
-        po = phillips_ouliaris_proxy(prices[a], prices[b])
-        beta = estimate_hedge_ratio(prices[a], prices[b])
-        score = abs_corr - 0.25 * min(float(eg.get("pvalue", 1) or 1), 1.0)
+        corr = returns[a].corr(returns[b])
+        try:
+            coint_score, coint_p, _ = coint(np.log(aligned[a]), np.log(aligned[b]))
+        except Exception:
+            coint_p = np.nan
+        beta = estimate_hedge_ratio(aligned[a], aligned[b])
+        spread = build_spread(aligned[a], aligned[b], beta)
+        try:
+            adf_p = adfuller(spread.dropna())[1]
+        except Exception:
+            adf_p = np.nan
+        score = abs(corr) - 0.2 * np.nan_to_num(coint_p, nan=1.0) - 0.1 * np.nan_to_num(adf_p, nan=1.0)
         rows.append({
             "asset_a": a,
             "asset_b": b,
-            "abs_return_corr": abs_corr,
-            "eg_coint_pvalue": eg.get("pvalue"),
-            "po_proxy_pvalue": po.get("residual_adf_pvalue"),
+            "abs_return_corr": abs(float(corr)),
+            "eg_coint_pvalue": float(coint_p) if not np.isnan(coint_p) else np.nan,
+            "spread_adf_pvalue": float(adf_p) if not np.isnan(adf_p) else np.nan,
             "hedge_ratio": beta,
             "score": score,
         })
-    result = pd.DataFrame(rows)
-    if result.empty:
-        return result
-    result = result.sort_values(["eg_coint_pvalue", "score"], ascending=[True, False])
-    result = result[result["eg_coint_pvalue"].fillna(1) <= max_cointegration_pvalue]
-    if result.empty:
-        # If no pair passes the strict test, keep the best correlated pairs so the pipeline can continue.
-        result = pd.DataFrame(rows).sort_values("score", ascending=False)
-    return result.head(top_n).reset_index(drop=True)
+    df = pd.DataFrame(rows).sort_values("score", ascending=False)
+    filtered = df[(df["abs_return_corr"] >= min_abs_corr) & (df["eg_coint_pvalue"] <= max_pvalue)]
+    if filtered.empty:
+        filtered = df.head(top_n)
+    return filtered.head(top_n).reset_index(drop=True)
+
+
+def select_top_pair(pair_table: pd.DataFrame) -> Tuple[str, str, float]:
+    row = pair_table.iloc[0]
+    return str(row["asset_a"]), str(row["asset_b"]), float(row["hedge_ratio"])

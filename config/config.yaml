@@ -1,48 +1,80 @@
 project:
-  name: "ML-Enhanced Robust Equity Pairs Trading under Synthetic Market Regimes"
-  track: "Track 8 - Machine Learning (Deep) Investment Strategies"
+  name: ML-Enhanced Robust Equity Pairs Trading under Synthetic Market Regimes
+  version: module3-proposal
+  random_seed: 42
 
 data:
-  use_sample_data: true
-  source: "yfinance"
-  tickers: ["KO", "PEP", "XOM", "CVX", "MSFT", "AAPL", "JPM", "BAC"]
-  start_date: "2018-01-01"
-  end_date: "2025-12-31"
-  price_field: "Adj Close"
+  use_yfinance: false
+  tickers: [KO, PEP, XOM, CVX, JPM, BAC, MSFT, AAPL, SPY, QQQ]
+  start: '2021-01-01'
+  end: '2026-06-30'
+  frequency: daily
+  fallback_days: 900
+  base_pair: [KO, PEP]
 
 pair_selection:
-  min_abs_correlation: 0.70
+  min_abs_corr: 0.55
   max_cointegration_pvalue: 0.10
-  top_n_pairs: 5
+  top_n: 8
 
 features:
-  zscore_window: 30
-  volatility_window: 30
-  correlation_window: 60
-  half_life_max: 120
+  lookback_zscore: 30
+  lookback_volatility: 20
+  lookback_correlation: 60
+  lookback_drawdown: 60
+  half_life_lag: 1
 
-strategy:
-  entry_z: 2.0
-  exit_z: 0.5
-  stop_z: 3.5
+labels:
+  horizon_days: 10
+  transaction_cost_bps: 2.0
+  convergence_zscore: 0.25
+  stop_loss_zscore: 3.0
+
+backtest:
+  entry_z: 1.5
+  exit_z: 0.25
+  stop_z: 3.0
   max_holding_days: 20
-  transaction_cost_bps: 5
+  transaction_cost_bps: 2.0
+  slippage_bps: 1.0
+  initial_capital: 1.0
+  train_fraction: 0.70
 
-ml:
-  models: ["logistic_regression", "random_forest"]
-  probability_threshold: 0.55
-  test_size: 0.30
+models:
   random_state: 42
+  probability_threshold: 0.55
+  algorithms: [logistic_regression, random_forest]
 
 synthetic:
   n_scenarios: 50
-  n_steps: 252
-  base_mean_reversion: 0.08
-  base_volatility: 1.0
-  jump_probability: 0.02
-  jump_scale: 2.5
-  correlation_break_probability: 0.10
+  scenario_length: 252
+  seed: 42
+  regimes:
+    calm:
+      vol_scale: 0.8
+      jump_prob: 0.002
+      mean_reversion_scale: 1.2
+      corr_break_prob: 0.01
+    high_vol:
+      vol_scale: 1.5
+      jump_prob: 0.01
+      mean_reversion_scale: 0.9
+      corr_break_prob: 0.02
+    jump:
+      vol_scale: 1.2
+      jump_prob: 0.03
+      mean_reversion_scale: 0.8
+      corr_break_prob: 0.03
+    weak_mean_reversion:
+      vol_scale: 1.1
+      jump_prob: 0.01
+      mean_reversion_scale: 0.35
+      corr_break_prob: 0.04
+    stress:
+      vol_scale: 2.2
+      jump_prob: 0.05
+      mean_reversion_scale: 0.25
+      corr_break_prob: 0.10
 
 outputs:
-  tables_dir: "outputs/tables"
-  figures_dir: "outputs/figures"
+  dir: outputs

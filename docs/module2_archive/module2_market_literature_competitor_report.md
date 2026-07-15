@@ -3,7 +3,7 @@
 **Project:** ML-Enhanced Robust Equity Pairs Trading under Synthetic Market Regimes  
 **Track:** Track 8 - Machine Learning (Deep) Investment Strategies  
 **Prepared by:** El Moatasem Madani and Henry A. Sada  
-**Repository placeholder:** `https://github.com/YOUR_USERNAME/mscf-690-ml-enhanced-pairs-trading`
+**Repository placeholder:** `https://github.com/El-Moatasem/robust-pairs-trading-synthetic-regimes`
 
 ## Repository description
 
