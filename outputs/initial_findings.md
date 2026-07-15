@@ -4,7 +4,7 @@ The current codebase was run on reproducible daily sample data so that the pipel
 
 - Best temporary strategy by Sharpe: Baseline z-score with Sharpe -0.289.
 
-- Best temporary model by F1: logistic_regression with F1 0.620.
+- Best temporary model by F1: random_forest with F1 0.627.
 
 - Synthetic scenarios with the largest spread volatility are: scenario_010_stress, scenario_005_stress, scenario_015_stress.
 
