@@ -1,6 +1,6 @@
 # ML-Enhanced Robust Equity Pairs Trading under Synthetic Market Regimes
 
-This repository contains the MScFE 690 capstone research codebase for **ML-enhanced robust equity pairs trading under synthetic market regimes**.
+This repository contains the MScFE-690 capstone research codebase for **ML-enhanced robust equity pairs trading under synthetic market regimes**.
 
 The project investigates whether machine learning and optional deep learning can improve a classical equity/ETF pairs-trading strategy by acting as a **decision filter**. The goal is not to predict raw prices directly, but to decide whether a statistical trade signal should be accepted, rejected, or treated as a possible warning of regime breakdown.
 
