@@ -1,0 +1,10 @@
+feature,importance
+signal_zscore,0.8275022310085104
+half_life,0.7869894947170444
+rolling_corr,0.571588399464422
+spread_volatility,0.565725537474312
+spread_drawdown,0.44414190807382214
+regime_stress_proxy,0.42122024436674477
+abs_zscore,0.16548652920082935
+spread_change_lagged,0.11815139192739155
+deviation_persistence,0.010810545035850444

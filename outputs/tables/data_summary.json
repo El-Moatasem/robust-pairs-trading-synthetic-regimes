@@ -1,8 +1,11 @@
 {
-  "source": "offline_reproducible_synthetic_daily_prices",
+  "source": "offline_reproducible_cointegrated_synthetic_daily_prices",
+  "mode_requested": "synthetic",
+  "is_synthetic": true,
+  "fallback_reason": null,
   "frequency": "daily",
   "n_assets": 10,
-  "n_observations": 900,
-  "start": "2021-01-01",
-  "end": "2024-06-13"
+  "n_observations": 1800,
+  "start": "2018-01-01",
+  "end": "2024-11-22"
 }

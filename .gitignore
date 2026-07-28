@@ -1,26 +1,11 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-.pytest_cache/
-.mypy_cache/
-
-# Environments
 .venv/
 venv/
-env/
-local_directory/
-.env
-
-# OS / IDE
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.idea/
 .DS_Store
 __MACOSX/
-.idea/
-.vscode/
-.ipynb_checkpoints/
-
-# Optional large data/cache files
-outputs/cache/
-data/raw/*.zip
-data/raw/*.parquet
-data/processed/*.parquet
+outputs/models/*.joblib
+data/raw/*.csv
+data/processed/*.csv
