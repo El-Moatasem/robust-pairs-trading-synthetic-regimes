@@ -1,0 +1,22 @@
+{
+  "train_index": 890,
+  "validation_index": 348,
+  "test_index": 538,
+  "pair_selection_end": "2021-05-28",
+  "train_end": "2021-05-28",
+  "validation_start": "2021-06-16",
+  "validation_end": "2022-10-14",
+  "test_start": "2022-11-02",
+  "test_end": "2024-11-22",
+  "purge_horizon_days": 10,
+  "embargo_days": 2,
+  "labeled_signals_total": 440,
+  "train_signals": 185,
+  "validation_signals": 94,
+  "test_signals": 156,
+  "train_prevalence": 0.5675675675675675,
+  "validation_prevalence": 0.48936170212765956,
+  "test_prevalence": 0.38461538461538464,
+  "model_selection_basis": "highest f1 on validation only",
+  "selected_model": "random_forest"
+}
