@@ -1,6 +1,6 @@
 project:
   name: ML-Enhanced Robust Equity Pairs Trading under Synthetic Market Regimes
-  version: revised-peer-review-response
+  version: m6-draft-peer-review-revised
   random_seed: 42
 
 data:
