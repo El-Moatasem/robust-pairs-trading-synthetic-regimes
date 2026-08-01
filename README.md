@@ -1,4 +1,4 @@
-# MScFE 690: ML-Enhanced Robust Equity Pairs Trading under Synthetic Market Regimes
+# MScFE-690: ML-Enhanced Robust Equity Pairs Trading under Synthetic Market Regimes
 
 This repository contains the capstone research codebase for **ML-Enhanced Robust Equity Pairs Trading under Synthetic Market Regimes** under **Track 8 - Machine Learning (Deep) Investment Strategies**.
 
@@ -17,7 +17,7 @@ The project combines:
 
 ## Repository description for GitHub
 
-MScFE 690 capstone research codebase for ML-enhanced equity pairs trading, synthetic market-regime robustness testing, cointegration-based statistical arbitrage, ML trade filtering, and risk-aware backtesting.
+MScFE-690 capstone research codebase for ML-enhanced equity pairs trading, synthetic market-regime robustness testing, cointegration-based statistical arbitrage, ML trade filtering, and risk-aware backtesting.
 
 ## Repository structure
 
