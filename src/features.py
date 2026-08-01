@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from statsmodels.api import OLS, add_constant
 
 from .pairs import build_spread
 
@@ -27,19 +26,24 @@ def rolling_zscore(series: pd.Series, window: int) -> pd.Series:
 
 
 def _rolling_half_life(spread: pd.Series, window: int) -> pd.Series:
-    result = pd.Series(np.nan, index=spread.index, dtype=float)
-    for i in range(window, len(spread) + 1):
-        sample = spread.iloc[i - window:i].dropna()
-        if len(sample) < max(40, window // 2):
-            continue
-        lagged = sample.shift(1).dropna()
-        delta = sample.diff().dropna().loc[lagged.index]
-        if lagged.var() <= 1e-12:
-            continue
-        beta = float(OLS(delta, add_constant(lagged)).fit().params.iloc[1])
-        if beta < -1e-8:
-            result.iloc[i - 1] = min(float(-np.log(2.0) / beta), 252.0)
-    return result.ffill()
+    """Estimate the rolling mean-reversion half-life without repeated OLS fits.
+
+    For each trailing spread window we estimate the slope in
+    ``Delta s_t = a + b s_(t-1) + u_t``.  With an intercept, the OLS slope is
+    simply Cov(s_(t-1), Delta s_t) / Var(s_(t-1)), so rolling covariance and
+    variance give the same slope much faster than fitting one statsmodels model
+    per timestamp.  A negative slope implies mean reversion and yields
+    ``half_life = -ln(2) / b``.
+    """
+    pair_window = max(2, int(window) - 1)
+    min_periods = max(39, int(window) // 2 - 1)
+    lagged = spread.shift(1)
+    delta = spread.diff()
+    covariance = lagged.rolling(pair_window, min_periods=min_periods).cov(delta)
+    variance = lagged.rolling(pair_window, min_periods=min_periods).var()
+    beta = covariance / variance.replace(0.0, np.nan)
+    half_life = (-np.log(2.0) / beta).where(beta < -1e-8)
+    return half_life.clip(upper=252.0).ffill()
 
 
 def _consecutive_deviation_count(abs_zscore: pd.Series, threshold: float) -> pd.Series:

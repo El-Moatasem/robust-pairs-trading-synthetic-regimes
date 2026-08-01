@@ -2,7 +2,7 @@
 
 | Peer-review issue | Revision implemented |
 |---|---|
-| Daily data and convergence horizon need theoretical linkage | Added half-life estimation, explicit convergence horizon, and documented the limitation that cointegration does not guarantee convergence within a fixed horizon. |
+| Daily data and convergence horizon need theoretical linkage | Added half-life estimation and documented the limitation that cointegration does not guarantee convergence within a fixed horizon. The current 10-day label horizon and 20-day maximum holding period are specified ex ante and are interpreted relative to estimated half-life; horizon sensitivity remains part of the final empirical work. |
 | Cointegration may decay or break | Pair selection is training-only; the frozen relationship is evaluated out of sample; synthetic weak-mean-reversion and stress regimes are included. |
 | Regime-switching theory was unclear | Clarified that the project uses calibrated synthetic regimes rather than a formal hidden Markov model. Added an AR(1)/OU calibration and explicit regime multipliers. |
 | Regime-stress proxy was undefined | Added an explicit formula based on trailing percentiles of spread volatility and weakening correlation. |

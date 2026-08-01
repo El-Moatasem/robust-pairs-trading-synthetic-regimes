@@ -32,6 +32,22 @@ The revised implementation now:
 - tests calm, high-volatility, jump, weak-mean-reversion, and stress regimes;
 - includes tests confirming no future-data changes alter past predictors.
 
+
+## M6 draft-project submission status
+
+This repository is the **Module 6 draft-project source-code snapshot**. It contains the peer-review revisions, reproducible current results, and the documented plan for the remaining empirical work.
+
+For M6, the default configuration intentionally uses deterministic synthetic development data so the instructor can reproduce the complete workflow offline. The resulting figures and metrics are **methodology-development evidence**, not claims of historical profitability. The strict public-data configuration is included as the next empirical stage and fails explicitly if genuine public data are unavailable.
+
+The M6 rubric asks for code that has been further developed since the previous submission, appropriate code comments, and a detailed discussion of results and their significance. The relevant materials are:
+
+- `docs/PEER_REVIEW_RESPONSE.md` - issue-by-issue revisions made after peer review.
+- `docs/METHODOLOGY.md` - equations, assumptions, labels, splits, and backtest definitions.
+- `docs/RESULTS_AND_SIGNIFICANCE.md` - current results and the inferences that can and cannot be drawn.
+- `docs/M6_PROGRESS_AND_SCHEDULE.md` - completed work, remaining work, and schedule.
+- `docs/SOURCE_CODE_GUIDELINE_CHECKLIST.md` - mapping to WQU source-code requirements.
+- `M6_SUBMISSION.md` - submission/run checklist.
+
 ## Repository structure
 
 ```text
@@ -63,7 +79,7 @@ outputs/                            Current reproducible synthetic-development r
 ## Setup on macOS or Linux
 
 ```bash
-cd robust-pairs-trading-synthetic-regimes_FINAL
+cd robust-pairs-trading-synthetic-regimes
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip

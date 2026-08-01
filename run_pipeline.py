@@ -63,14 +63,17 @@ def main() -> None:
     dirs = ensure_dirs(cfg["outputs"]["dir"])
     shutil.copy2(args.config, dirs["base"] / "config_used.yaml")
 
+    # Stage 1 - Load data and record whether the run is synthetic or genuine public data.
     prices, data_summary = load_prices(cfg, require_public=args.require_public_data)
     prices.to_csv(dirs["tables"] / "prices.csv")
     save_json(data_summary.to_dict(), dirs["tables"] / "data_summary.json")
 
+    # Stage 2 - Build purged/embargoed chronological partitions before any model fitting.
     split = make_time_split(prices.index, cfg)
     split_summary = split.summary()
     save_json(split_summary, dirs["tables"] / "time_split_summary.json")
 
+    # Stage 3 - Select the pair and estimate the hedge ratio using the training window only.
     pair_training_prices = prices.loc[prices.index.intersection(split.train_index)]
     candidate_pairs, pair_summary = screen_pairs(pair_training_prices, cfg)
     candidate_pairs.to_csv(dirs["tables"] / "candidate_pairs.csv", index=False)
@@ -78,10 +81,12 @@ def main() -> None:
     asset_a, asset_b, alpha, hedge_ratio, pair_status = select_top_pair(candidate_pairs)
     selected_pair = candidate_pairs.iloc[0].copy()
 
+    # Stage 4 - Create one-day-lagged predictors with the training-fixed cointegrating parameters.
     features = build_feature_frame(prices, asset_a, asset_b, cfg, alpha, hedge_ratio)
     features.to_csv(dirs["tables"] / "feature_frame.csv")
     _feature_definitions().to_csv(dirs["tables"] / "feature_definitions.csv", index=False)
 
+    # Stage 5 - Create cost-aware convergence labels only at valid entry signals.
     labels = build_convergence_labels(features, cfg)
     labels.to_csv(dirs["tables"] / "labels.csv")
     label_summary = pd.DataFrame(
@@ -97,6 +102,7 @@ def main() -> None:
     )
     label_summary.to_csv(dirs["tables"] / "label_summary.csv", index=False)
 
+    # Stage 6 - Select model/threshold on validation data only; reserve the test set for evaluation.
     bundles, model_metrics, predictions, selected_model, supervised_summary = train_models(
         features, labels, split, cfg
     )
@@ -108,6 +114,7 @@ def main() -> None:
         joblib.dump(bundle.model, dirs["models"] / f"{name}.joblib")
         bundle.feature_importance.to_csv(dirs["tables"] / f"feature_importance_{name}.csv", index=False)
 
+    # Stage 7 - Compare the baseline and every ML-filtered strategy on the same untouched test window.
     test_features = features.loc[features.index.intersection(split.test_index)].copy()
     results_by_name: dict[str, pd.DataFrame] = {}
     strategy_rows: list[dict] = []
@@ -131,6 +138,7 @@ def main() -> None:
     strategy_metrics = pd.DataFrame(strategy_rows)
     strategy_metrics.to_csv(dirs["tables"] / "strategy_metrics_test.csv", index=False)
 
+    # Stage 8 - Calibrate synthetic stress regimes from training data and apply the frozen selected model.
     training_features = features.loc[features.index.intersection(split.train_index)]
     scenario_table, sample_paths, calibration = evaluate_synthetic_regimes(
         training_features=training_features,
@@ -162,6 +170,7 @@ def main() -> None:
     if not sample_paths.empty:
         plot_scenario_spreads(sample_paths, dirs["figures"] / "synthetic_sample_spreads.png")
 
+    # Stage 9 - Persist machine-readable provenance, caveats, metrics, and report-ready figures.
     run_summary = {
         "project": cfg["project"],
         "data": data_summary.to_dict(),
