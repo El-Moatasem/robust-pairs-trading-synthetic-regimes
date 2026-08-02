@@ -7,6 +7,22 @@ import pandas as pd
 
 @dataclass(frozen=True)
 class TimeSplit:
+    """Immutable data container holding chronological train/validation/test indices and date metadata.
+
+    Attributes:
+        train_index (pd.Index): Index subset corresponding to the training split.
+        validation_index (pd.Index): Index subset corresponding to the validation split.
+        test_index (pd.Index): Index subset corresponding to the testing split.
+        pair_selection_end (str): End date string for the pair selection/train window.
+        train_end (str): End date string for the training split.
+        validation_start (str): Start date string for the validation split.
+        validation_end (str): End date string for the validation split.
+        test_start (str): Start date string for the test split.
+        test_end (str): End date string for the test split.
+        purge_horizon_days (int): Number of days purged before partition boundaries to prevent label leakage.
+        embargo_days (int): Number of days embargoed after partition boundaries to prevent post-boundary leakage.
+    """
+
     train_index: pd.Index
     validation_index: pd.Index
     test_index: pd.Index
@@ -20,6 +36,12 @@ class TimeSplit:
     embargo_days: int
 
     def summary(self) -> dict:
+        """Converts the TimeSplit instance into a summary dictionary with split lengths.
+
+        Returns:
+            dict: Dictionary representation of time split metadata where index fields
+                are replaced with their respective integer observation counts.
+        """
         result = asdict(self)
         result["train_index"] = len(self.train_index)
         result["validation_index"] = len(self.validation_index)
@@ -28,6 +50,16 @@ class TimeSplit:
 
 
 def _safe_date(index: pd.Index, position: int) -> str:
+    """Safely extracts an ISO-formatted date string from a pandas Index at a given position.
+
+    Args:
+        index (pd.Index): Pandas index containing date or timestamp objects.
+        position (int): Integer index position of the element to extract.
+
+    Returns:
+        str: Date string formatted as 'YYYY-MM-DD' if index contains date-like objects,
+            otherwise the string representation of the value.
+    """
     value = index[position]
     if hasattr(value, "date"):
         return str(value.date())
@@ -40,6 +72,20 @@ def make_time_split(index: pd.Index, cfg: dict) -> TimeSplit:
     Labels use future returns up to `purge_horizon_days`, so observations immediately before a
     boundary are removed from the earlier set. An additional embargo removes observations after
     each boundary from the next set. This prevents overlapping label horizons across partitions.
+
+    Args:
+        index (pd.Index): Sequential time-series pandas index (e.g., trading dates).
+        cfg (dict): Configuration dictionary containing split settings under the `"split"` key
+            (e.g., `pair_selection_fraction`, `validation_fraction`, `test_fraction`,
+            `purge_horizon_days`, `embargo_days`).
+
+    Returns:
+        TimeSplit: A populated `TimeSplit` dataclass containing the purged index partitions
+            and string date boundary attributes.
+
+    Raises:
+        ValueError: If total observations are fewer than 150, if partition fractions
+            do not sum to 1.0, or if any resulting purged partition has fewer than 20 observations.
     """
     if len(index) < 150:
         raise ValueError("At least 150 observations are required for a purged three-way time split.")
