@@ -14,6 +14,17 @@ from .models import ModelBundle, _positive_probability
 
 @dataclass(frozen=True)
 class SyntheticCalibration:
+    """Immutable data container for empirical calibration parameters of a synthetic spread process.
+
+    Attributes:
+        spread_mean (float): Unconditional long-run mean of the historical spread process.
+        spread_phi (float): Estimated AR(1) persistence coefficient of the spread.
+        innovation_std (float): Standard deviation of continuous baseline Gaussian innovations.
+        jump_probability (float): Empirical probability of discrete price jump occurrences per period.
+        jump_std (float): Standard deviation of the jump distribution.
+        common_return_mean (float): Expected value of the common driver asset log returns.
+        common_return_std (float): Standard deviation of the common driver asset log returns.
+    """
     spread_mean: float
     spread_phi: float
     innovation_std: float
@@ -23,10 +34,27 @@ class SyntheticCalibration:
     common_return_std: float
 
     def to_dict(self) -> dict:
+        """Converts the SyntheticCalibration dataclass instance into a standard dictionary.
+
+        Returns:
+            dict: Dictionary representation of the calibration parameters.
+        """
         return asdict(self)
 
 
 def calibrate_synthetic_process(training_features: pd.DataFrame) -> SyntheticCalibration:
+    """Calibrates an AR(1) process with jump-diffusion residuals on historical spread features.
+
+    Fits an OLS regression on lagged spreads to estimate persistence φ (phi), long-term mean,
+    innovation volatility, tail jump parameters (using 99th percentile residual cutoffs),
+    and common asset return dynamics.
+
+    Args:
+        training_features (pd.DataFrame): Training feature DataFrame containing `spread` and `asset_b_price` columns.
+
+    Returns:
+        SyntheticCalibration: Calibrated parameter container for synthetic pair price simulation.
+    """
     spread = training_features["spread"].dropna()
     lagged = spread.shift(1).dropna()
     current = spread.loc[lagged.index]
@@ -64,6 +92,29 @@ def _simulate_pair(
     asset_a: str,
     asset_b: str,
 ) -> pd.DataFrame:
+    """Simulates daily price paths for a pair under a specified synthetic stress regime.
+
+    Generates non-stationary, cointegrated asset prices subject to regime-specific volatility
+    scaling, mean-reversion adjustments, random long-run mean shifts, and jump-diffusion shocks.
+
+    Args:
+        length (int): Total number of business days to simulate.
+        calibration (SyntheticCalibration): Base empirical calibration parameters.
+        regime (dict): Regime configuration dictionary containing multiplier parameters
+            (`volatility_multiplier`, `mean_reversion_multiplier`, `jump_probability_multiplier`,
+            `jump_size_multiplier`, and `long_run_mean_shift_std`).
+        alpha (float): Cointegration intercept parameter.
+        beta (float): Cointegration hedge ratio ($\beta$).
+        start_asset_b (float): Starting price level for asset B.
+        start_date (pd.Timestamp): Starting business date for the simulated index.
+        rng (np.random.Generator): NumPy random number generator instance.
+        asset_a (str): Ticker symbol for asset A.
+        asset_b (str): Ticker symbol for asset B.
+
+    Returns:
+        pd.DataFrame: DataFrame containing synthetic asset daily prices (`asset_a` and `asset_b`),
+            indexed by business trading dates.
+    """
     vol_mult = float(regime["volatility_multiplier"])
     mr_mult = float(regime["mean_reversion_multiplier"])
     jump_prob_mult = float(regime["jump_probability_multiplier"])
@@ -107,6 +158,27 @@ def evaluate_synthetic_regimes(
     beta: float,
     selected_bundle: ModelBundle,
 ) -> tuple[pd.DataFrame, pd.DataFrame, SyntheticCalibration]:
+    """Evaluates machine learning and baseline strategies across synthetic market regime scenarios.
+
+    Simulates multiple stress scenarios based on calibrated process dynamics, applies feature
+    engineering and model signal filtering, and backtests both unfiltered baseline and
+    ML-filtered trading strategies.
+
+    Args:
+        training_features (pd.DataFrame): Historical training feature matrix used for process calibration.
+        cfg (dict): Pipeline configuration dictionary containing backtest and `"synthetic"` settings.
+        asset_a (str): Primary asset ticker symbol.
+        asset_b (str): Secondary asset ticker symbol.
+        alpha (float): Cointegration intercept parameter.
+        beta (float): Cointegration hedge ratio ($\beta$).
+        selected_bundle (ModelBundle): Trained machine learning model bundle used to filter trade entries.
+
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame, SyntheticCalibration]: A tuple containing:
+            - scenario_table (pd.DataFrame): Backtest performance summary across all simulated scenario runs.
+            - sample_paths (pd.DataFrame): Detailed sample spread and z-score time series paths for visualization.
+            - calibration (SyntheticCalibration): Empirical calibration object fitted on training data.
+    """
     calibration = calibrate_synthetic_process(training_features)
     scfg = cfg["synthetic"]
     rng = np.random.default_rng(int(scfg.get("seed", 42)))
@@ -176,6 +248,19 @@ def evaluate_synthetic_regimes(
 
 
 def summarize_regimes(scenario_table: pd.DataFrame) -> pd.DataFrame:
+    """Aggregates scenario backtest results by market regime type.
+
+    Computes group-level summary metrics for each regime, including mean cumulative net PnL,
+    median Sharpe ratios, mean PnL spread differences, and the fraction of scenarios
+    where the ML-filtered strategy outperformed the baseline.
+
+    Args:
+        scenario_table (pd.DataFrame): Detailed scenario performance table generated by `evaluate_synthetic_regimes`.
+
+    Returns:
+        pd.DataFrame: Aggregated summary table grouped by `regime` sorted alphabetically. Returns
+            an empty DataFrame if `scenario_table` is empty.
+    """
     if scenario_table.empty:
         return pd.DataFrame()
     return (
