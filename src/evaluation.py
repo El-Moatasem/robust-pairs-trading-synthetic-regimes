@@ -12,6 +12,31 @@ def make_initial_findings(
     strategy_metrics: pd.DataFrame,
     regime_summary: pd.DataFrame,
 ) -> str:
+    """Generates a Markdown report summarizing research and backtest findings.
+
+    Formats metadata and results across data controls, pair selection, model performance,
+    out-of-sample trading metrics, and synthetic scenario robustness into a structured report.
+
+    Args:
+        data_summary (dict): Metadata describing the dataset source, operational mode,
+            and whether synthetic data was used.
+        pair_summary (dict): Summary statistics of pair filtering and selection processes
+            (e.g., number of pairs tested, passing filters, selection status).
+        selected_pair (pd.Series): Statistical metadata for the selected asset pair including
+            asset tickers (`asset_a`, `asset_b`) and p-values (`eg_pvalue`, `residual_adf_pvalue`,
+            `eg_fdr_pvalue`).
+        split_summary (dict): Configuration and metadata regarding dataset splits, purge/embargo
+            horizons, model selection criteria, and test class prevalence.
+        model_metrics (pd.DataFrame): DataFrame containing machine learning validation and test
+            evaluation metrics (must contain `validation_f1` and `test_f1` columns).
+        strategy_metrics (pd.DataFrame): DataFrame containing out-of-sample trading strategy
+            performance metrics (e.g., `strategy`, `sharpe`).
+        regime_summary (pd.DataFrame): DataFrame detailing model performance across synthetic
+            market regime scenarios (`regime`, `ml_outperforms_fraction`, `mean_ml_minus_baseline_pnl`).
+
+    Returns:
+        str: A Markdown-formatted string containing the complete preliminary research report.
+    """
     selected_model_row = model_metrics.loc[
         model_metrics["validation_f1"].idxmax()
     ] if "validation_f1" in model_metrics else model_metrics.iloc[0]
