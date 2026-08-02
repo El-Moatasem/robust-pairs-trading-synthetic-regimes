@@ -10,6 +10,24 @@ from statsmodels.tsa.stattools import adfuller, coint
 
 
 def estimate_cointegrating_regression(y: pd.Series, x: pd.Series) -> tuple[float, float, pd.Series]:
+    """Estimates an OLS cointegrating regression between two log-price asset series.
+
+    Fits the log-linear model ln(y) = α + β · ln(x) + ε to
+    determine the cointegration intercept α, hedge ratio β, and spread residuals.
+
+    Args:
+        y (pd.Series): Price series for the dependent asset.
+        x (pd.Series): Price series for the independent asset.
+
+    Returns:
+        tuple[float, float, pd.Series]: A tuple containing:
+            - **alpha** (float): Intercept term of the log-linear regression.
+            - **beta** (float): Hedge ratio (slope coefficient) of the regression.
+            - **residual** (pd.Series): Residual spread series computed as ln(y) - α - β·ln(x).
+
+    Raises:
+        ValueError: If fewer than 60 aligned observations exist after dropping missing values.
+    """
     frame = pd.concat([y.rename("y"), x.rename("x")], axis=1).dropna()
     if len(frame) < 60:
         raise ValueError("At least 60 aligned observations are required.")
@@ -22,6 +40,20 @@ def estimate_cointegrating_regression(y: pd.Series, x: pd.Series) -> tuple[float
 
 
 def build_spread(y: pd.Series, x: pd.Series, alpha: float, hedge_ratio: float) -> pd.Series:
+    """Constructs a log-spread time series given fixed cointegration parameters.
+
+    Calculates the spread using fixed intercept and hedge ratio parameters:
+    spread = ln(y) - α - hedge_ratio · ln(x).
+
+    Args:
+        y (pd.Series): Price series for the dependent asset.
+        x (pd.Series): Price series for the independent asset.
+        alpha (float): Intercept parameter of the cointegrating relationship.
+        hedge_ratio (float): Hedge ratio ($\beta$) parameter of the cointegrating relationship.
+
+    Returns:
+        pd.Series: Log-spread time series indexed by observation dates.
+    """
     frame = pd.concat([y.rename("y"), x.rename("x")], axis=1).dropna()
     spread = np.log(frame["y"]) - alpha - hedge_ratio * np.log(frame["x"])
     spread.name = f"spread_{y.name}_{x.name}"
@@ -29,6 +61,20 @@ def build_spread(y: pd.Series, x: pd.Series, alpha: float, hedge_ratio: float) -
 
 
 def _adf_pvalue(series: pd.Series, regression: str = "n") -> tuple[float, float, int]:
+    """Runs an Augmented Dickey-Fuller (ADF) test to evaluate stationarity.
+
+    Args:
+        series (pd.Series): Time series data to test for unit roots.
+        regression (str, optional): Constant and trend order for ADF test
+            ('c' for constant, 'ct' for constant and trend, 'n' for no constant/trend).
+            Defaults to "n".
+
+    Returns:
+        tuple[float, float, int]: A tuple containing:
+            - **stat** (float): ADF test statistic. Returns `np.nan` if insufficient valid observations.
+            - **pvalue** (float): MacKinnon's approximate p-value. Returns `np.nan` if insufficient valid observations.
+            - **used_lag** (int): Number of lags included according to AIC criterion. Returns 0 if invalid.
+    """
     values = pd.Series(series).dropna()
     if len(values) < 60 or values.nunique() < 5:
         return np.nan, np.nan, 0
@@ -37,6 +83,20 @@ def _adf_pvalue(series: pd.Series, regression: str = "n") -> tuple[float, float,
 
 
 def _i1_diagnostic(log_price: pd.Series) -> tuple[float, float, bool]:
+    """Evaluates whether a log-price time series is plausibly integrated of order 1, I(1).
+
+    Checks whether the price level is non-stationary (p > 0.05 with trend) and
+    its first difference is stationary (p < 0.05 with constant).
+
+    Args:
+        log_price (pd.Series): Logarithm of asset price series.
+
+    Returns:
+        tuple[float, float, bool]: A tuple containing:
+            - **level_p** (float): ADF p-value on log-price levels with trend.
+            - **diff_p** (float): ADF p-value on first-differenced log-prices with constant.
+            - **plausible** (bool): True if level is non-stationary and first difference is stationary.
+    """
     _, level_p, _ = _adf_pvalue(log_price, regression="ct")
     _, diff_p, _ = _adf_pvalue(log_price.diff().dropna(), regression="c")
     plausible = bool(np.isfinite(level_p) and np.isfinite(diff_p) and level_p > 0.05 and diff_p < 0.05)
@@ -48,6 +108,27 @@ def screen_pairs(training_prices: pd.DataFrame, cfg: dict) -> tuple[pd.DataFrame
 
     The function reports all tests, applies Benjamini-Hochberg FDR to Engle-Granger p-values,
     and conservatively requires both Engle-Granger and residual-ADF diagnostics when configured.
+
+    Tests all unique pair combinations for correlation, cointegration (Engle-Granger and
+    residual ADF diagnostics), I(1) price integration, False Discovery Rate (FDR)
+    p-value control via Benjamini-Hochberg, and mean-reversion half-life.
+
+    Args:
+        training_prices (pd.DataFrame): DataFrame of historical asset price series for screening.
+        cfg (dict): Configuration dictionary containing settings under the `"pair_selection"` key
+            (e.g., `min_abs_corr`, `max_eg_pvalue`, `max_residual_adf_pvalue`, `fdr_alpha`, `require_i1`,
+            `require_both_cointegration_diagnostics`, `allow_best_available`, and `top_n`).
+
+    Returns:
+        tuple[pd.DataFrame, dict]: A tuple containing:
+            - **selected_table** (pd.DataFrame): DataFrame of candidate pairs sorted by test pass
+              status and custom screening score, containing statistical metrics and filter passes.
+            - **summary** (dict): Dictionary with pair-screening execution metadata (e.g., total pairs tested,
+              number passing all filters, and selected pair names).
+
+    Raises:
+        RuntimeError: If no candidate pairs meet observation length criteria, or if no pair
+            passes all filters when `allow_best_available` is set to False.
     """
     pcfg = cfg["pair_selection"]
     returns = training_prices.pct_change().dropna()
@@ -148,6 +229,18 @@ def screen_pairs(training_prices: pd.DataFrame, cfg: dict) -> tuple[pd.DataFrame
 
 
 def estimate_half_life(spread: pd.Series) -> float:
+    """Estimates the mean-reversion half-life of a spread series using an AR(1) process.
+
+    Fits an OLS regression on spread increments Δsₜ = α + β·sₜ₋₁ + εₜ
+    and calculates the half-life as -ln(2)/β.
+
+    Args:
+        spread (pd.Series): Time series of spread residuals.
+
+    Returns:
+        float: Estimated half-life in periods (days). Returns `np.inf` if β >= 0
+            (non-mean-reverting series) or `np.nan` if sample size < 60.
+    """
     values = pd.Series(spread).dropna()
     if len(values) < 60:
         return np.nan
@@ -161,6 +254,19 @@ def estimate_half_life(spread: pd.Series) -> float:
 
 
 def select_top_pair(pair_table: pd.DataFrame) -> tuple[str, str, float, float, str]:
+    """Selects the highest-ranked asset pair from the screened pair table.
+
+    Args:
+        pair_table (pd.DataFrame): Sorted DataFrame of candidate pairs output by `screen_pairs`.
+
+    Returns:
+        tuple[str, str, float, float, str]: A tuple containing:
+            - **asset_a** (str): Primary asset ticker symbol.
+            - **asset_b** (str): Secondary asset ticker symbol.
+            - **alpha** (float): Cointegration intercept parameter.
+            - **hedge_ratio** (float): Cointegration hedge ratio ($\beta$).
+            - **status** (str): Selection qualification status (`"passed_all"` or `"provisional"`).
+    """
     row = pair_table.iloc[0]
     status = "passed_all" if bool(row["passes_all"]) else "provisional"
     return str(row["asset_a"]), str(row["asset_b"]), float(row["alpha"]), float(row["hedge_ratio"]), status
