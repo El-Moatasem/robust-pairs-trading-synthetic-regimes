@@ -20,6 +20,18 @@ MODEL_FEATURE_COLUMNS = [
 
 
 def rolling_zscore(series: pd.Series, window: int) -> pd.Series:
+    """Calculates rolling z-scores for a time series.
+
+    Computes the standard score for each point relative to a rolling window mean
+    and standard deviation. Replaces zero standard deviations with NaN to prevent division by zero.
+
+    Args:
+        series (pd.Series): Time series data (e.g., spread values).
+        window (int): Size of the rolling calculation window.
+
+    Returns:
+        pd.Series: Series of rolling z-score values aligned with the input series index.
+    """
     mean = series.rolling(window=window, min_periods=window).mean()
     std = series.rolling(window=window, min_periods=window).std(ddof=0).replace(0.0, np.nan)
     return (series - mean) / std
@@ -34,6 +46,14 @@ def _rolling_half_life(spread: pd.Series, window: int) -> pd.Series:
     variance give the same slope much faster than fitting one statsmodels model
     per timestamp.  A negative slope implies mean reversion and yields
     ``half_life = -ln(2) / b``.
+
+    Args:
+        spread (pd.Series): Asset pair spread time series.
+        window (int): Lookback window size for the rolling covariance and variance calculations.
+
+    Returns:
+        pd.Series: Series of estimated mean-reversion half-lives in days, capped at 252.0
+            and forward-filled for non-reverting periods.
     """
     pair_window = max(2, int(window) - 1)
     min_periods = max(39, int(window) // 2 - 1)
@@ -47,6 +67,18 @@ def _rolling_half_life(spread: pd.Series, window: int) -> pd.Series:
 
 
 def _consecutive_deviation_count(abs_zscore: pd.Series, threshold: float) -> pd.Series:
+    """Counts consecutive trading days that absolute z-score exceeds a given threshold.
+
+    Tracks duration/persistence of spread dislocations by incrementing a counter for
+    consecutive days above threshold and resetting it to zero when the condition fails.
+
+    Args:
+        abs_zscore (pd.Series): Series of absolute z-score values.
+        threshold (float): Z-score cutoff limit determining a spread deviation (e.g., 1.0).
+
+    Returns:
+        pd.Series: Running counts of consecutive deviation days, indexed like `abs_zscore`.
+    """
     values = abs_zscore.fillna(0.0).to_numpy()
     counts = np.zeros(len(values), dtype=float)
     current = 0
@@ -60,6 +92,18 @@ def _consecutive_deviation_count(abs_zscore: pd.Series, threshold: float) -> pd.
 
 
 def _rolling_percentile_last(series: pd.Series, window: int) -> pd.Series:
+    """Computes the percentile rank of the current value within a rolling window.
+
+    Evaluates where the latest value ranks relative to historical values in a trailing window,
+    requiring at least 10 finite observations.
+
+    Args:
+        series (pd.Series): Time series input (e.g., spread volatility or inverse correlation).
+        window (int): Rolling evaluation window size.
+
+    Returns:
+        pd.Series: Series of percentile values bounded between 0.0 and 1.0.
+    """
     def percentile(values: np.ndarray) -> float:
         if len(values) == 0 or not np.isfinite(values[-1]):
             return np.nan
@@ -84,6 +128,23 @@ def build_feature_frame(
     The raw spread is retained for realized PnL. Every predictor used by the ML model and trading
     signal is shifted by `lag_predictors_by_days`, so a decision timestamp never uses the same-day
     close that generates its subsequent PnL.
+
+    Calculates pair spreads, rolling statistics (z-score, volatility, correlation, drawdown,
+    half-life, deviation persistence, and regime stress proxy), and applies a configurable lag
+    (e.g., 1 day) to all model input features to prevent look-ahead bias during signal generation.
+
+    Args:
+        prices (pd.DataFrame): DataFrame containing daily asset price series.
+        asset_a (str): Ticker symbol for the primary asset in the pair.
+        asset_b (str): Ticker symbol for the secondary asset in the pair.
+        cfg (dict): Configuration dictionary containing feature settings under key `"features"`
+            (lookback windows, lag settings, and threshold values).
+        alpha (float): Intercept parameter of the cointegration relationship.
+        hedge_ratio (float): Hedge ratio (beta) parameter of the cointegration relationship.
+
+    Returns:
+        pd.DataFrame: Feature DataFrame containing unlagged spread targets along with
+            lagged predictive features (`MODEL_FEATURE_COLUMNS`), filtered of missing values.
     """
     fcfg = cfg["features"]
     pair = prices[[asset_a, asset_b]].dropna().copy()
