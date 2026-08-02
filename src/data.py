@@ -10,6 +10,22 @@ import pandas as pd
 
 @dataclass(frozen=True)
 class DataSummary:
+    """Immutable data container holding execution metadata and dataset statistics.
+
+    Attributes:
+        source (str): Identifier or path representing the data source
+            (e.g., 'yfinance_auto_adjusted_close', 'cached_public_adjusted_close',
+            or 'offline_reproducible_cointegrated_synthetic_daily_prices').
+        mode_requested (str): The requested operational data mode ('synthetic', 'public', or 'auto').
+        is_synthetic (bool): Flag indicating whether the loaded dataset is synthetically generated.
+        fallback_reason (str | None): Exception message or description if automatic fallback
+            to synthetic data occurred; None otherwise.
+        frequency (str): Sampling frequency of the price series (e.g., 'daily').
+        n_assets (int): Total number of asset price series contained in the dataset.
+        n_observations (int): Total number of time series observations/rows.
+        start (str): Start date string of the time series dataset ('YYYY-MM-DD').
+        end (str): End date string of the time series dataset ('YYYY-MM-DD').
+    """
     source: str
     mode_requested: str
     is_synthetic: bool
@@ -21,10 +37,29 @@ class DataSummary:
     end: str
 
     def to_dict(self) -> dict:
+        """Converts the DataSummary dataclass instance into a standard dictionary.
+
+        Returns:
+            dict: Dictionary representation of the dataset summary metadata.
+        """
         return asdict(self)
 
 
 def _ou_process(n: int, rng: np.random.Generator, phi: float, sigma: float, mean: float = 0.0) -> np.ndarray:
+    """Generates a discrete-time Ornstein-Uhlenbeck (AR(1)) process time series.
+
+    Computes a mean-reverting stochastic series starting from its stationary distribution.
+
+    Args:
+        n (int): Number of time steps/observations to generate.
+        rng (np.random.Generator): NumPy random number generator for reproducible sampling.
+        phi (float): Autoregressive coefficient controlling the rate of mean reversion (|phi| < 1).
+        sigma (float): Standard deviation of the Gaussian innovation noise term.
+        mean (float, optional): Long-term mean level of the process. Defaults to 0.0.
+
+    Returns:
+        np.ndarray: 1D array of shape `(n,)` containing the generated OU process values.
+    """
     values = np.zeros(n, dtype=float)
     values[0] = mean + rng.normal(0.0, sigma / max(np.sqrt(1.0 - phi**2), 1e-6))
     for i in range(1, n):
@@ -43,6 +78,22 @@ def generate_synthetic_prices(
     Each designated pair shares an I(1) stochastic trend while its log-price residual follows
     a stationary AR(1)/OU process. This construction avoids the earlier generator's accidental
     random-walk residual, which could produce conflicting cointegration diagnostics.
+    Generates deterministic daily asset prices with explicitly cointegrated pairs.
+
+    Constructs synthetic log-price series using market, sector, and jump factors along
+    with stochastic volatility. Pairs share an $I(1)$ stochastic trend with stationary
+    Ornstein-Uhlenbeck residuals to guarantee stationarity without random-walk noise.
+
+    Args:
+        tickers (Iterable[str]): List or iterable of ticker symbols to generate prices for.
+        n_days (int, optional): Total number of business trading days to simulate. Defaults to 1800.
+        seed (int, optional): Random seed for NumPy random number generator. Defaults to 42.
+        start (str, optional): Start date string for the business day date index formatted as
+            'YYYY-MM-DD'. Defaults to "2018-01-01".
+
+    Returns:
+        pd.DataFrame: DataFrame containing simulated daily asset prices rounded to 4 decimal places,
+            indexed by date (`pd.DatetimeIndex`) with asset tickers as column names.
     """
     rng = np.random.default_rng(seed)
     tickers = list(tickers)
@@ -94,6 +145,23 @@ def generate_synthetic_prices(
 
 
 def _download_public_prices(tickers: list[str], start: str, end: str) -> pd.DataFrame:
+    """Downloads auto-adjusted daily closing market prices from Yahoo Finance.
+
+    Cleans raw market data by forward-filling missing values and removing completely
+    empty columns or rows.
+
+    Args:
+        tickers (list[str]): List of asset ticker symbols to download.
+        start (str): Start date string for the data fetch formatted as 'YYYY-MM-DD'.
+        end (str): End date string for the data fetch formatted as 'YYYY-MM-DD'.
+
+    Returns:
+        pd.DataFrame: Cleaned DataFrame of auto-adjusted Close prices, indexed by trading dates.
+
+    Raises:
+        RuntimeError: If `yfinance` returns empty data, missing Close price columns, or if
+            the downloaded dataset contains fewer than 2 valid assets or 300 rows.
+    """
     import yfinance as yf  # type: ignore
 
     downloaded = yf.download(
@@ -123,6 +191,28 @@ def _download_public_prices(tickers: list[str], start: str, end: str) -> pd.Data
 
 
 def load_prices(config: dict, require_public: bool = False) -> tuple[pd.DataFrame, DataSummary]:
+    """Loads asset price data based on configuration specifications with automatic fallback support.
+
+    Attempts to load public historical asset prices from a cached CSV file or by downloading
+    via Yahoo Finance. If public data fetch fails or is unavailable, it gracefully falls back
+    to generating reproducible synthetic cointegrated daily price data.
+
+    Args:
+        config (dict): Configuration dictionary containing `data` specifications (e.g., `mode`,
+            `tickers`, `frequency`, `start`, `end`, `cache_csv`, `fallback_days`) and `project` parameters.
+        require_public (bool, optional): If True, forces requested mode to 'public' regardless of
+            the configuration file setting. Defaults to False.
+
+    Returns:
+        tuple[pd.DataFrame, DataSummary]: A tuple containing:
+            - **prices** (pd.DataFrame): DataFrame of daily price time series for specified assets.
+            - **summary** (DataSummary): Dataclass containing execution metadata, data source details,
+              and observation metrics.
+
+    Raises:
+        ValueError: If `config["data"]["mode"]` is not one of `synthetic`, `public`, or `auto`.
+        RuntimeError: If `public` mode is strictly required but downloads/cache fail to load.
+    """
     data_cfg = config["data"]
     requested_mode = str(data_cfg.get("mode", "synthetic")).lower()
     if require_public:
