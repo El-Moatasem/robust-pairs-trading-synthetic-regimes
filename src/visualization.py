@@ -8,6 +8,17 @@ from sklearn.metrics import RocCurveDisplay
 
 
 def plot_pair_diagnostics(features: pd.DataFrame, path: str | Path, asset_a: str, asset_b: str) -> None:
+    """Generates and saves a two-panel diagnostic plot for a selected asset pair.
+
+    Plots the log-spread time series in the top subplot and the lagged trading signal
+    z-score with entry/exit threshold lines in the bottom subplot.
+
+    Args:
+        features (pd.DataFrame): DataFrame containing `spread` and `signal_zscore` time series.
+        path (str | Path): Destination file path where the plot figure will be saved.
+        asset_a (str): Ticker symbol for the primary asset in the pair.
+        asset_b (str): Ticker symbol for the secondary asset in the pair.
+    """
     fig, axes = plt.subplots(2, 1, figsize=(9, 7), sharex=True)
     axes[0].plot(features.index, features["spread"])
     axes[0].set_title(f"Training-Fixed Log Spread: {asset_a} - beta x {asset_b}")
@@ -27,6 +38,15 @@ def plot_pair_diagnostics(features: pd.DataFrame, path: str | Path, asset_a: str
 
 
 def plot_equity_comparison(results_by_name: dict[str, pd.DataFrame], path: str | Path) -> None:
+    """Plots out-of-sample cumulative net PnL performance curves across strategies.
+
+    Overlaying multiple strategy equity curves over time to compare backtest results.
+
+    Args:
+        results_by_name (dict[str, pd.DataFrame]): A dictionary mapping strategy names to
+            their backtest result DataFrames containing a `cumulative_net_pnl` column.
+        path (str | Path): Destination file path where the plot figure will be saved.
+    """
     fig, ax = plt.subplots(figsize=(9, 5))
     for name, results in results_by_name.items():
         ax.plot(results.index, results["cumulative_net_pnl"], label=name)
@@ -41,6 +61,14 @@ def plot_equity_comparison(results_by_name: dict[str, pd.DataFrame], path: str |
 
 
 def plot_feature_importance(importance: pd.DataFrame, path: str | Path, title: str) -> None:
+    """Generates and saves a horizontal bar plot of feature importances or model coefficients.
+
+    Args:
+        importance (pd.DataFrame): DataFrame containing `feature` names and their corresponding
+            `importance` metric values.
+        path (str | Path): Destination file path where the plot figure will be saved.
+        title (str): Title header text for the generated plot.
+    """
     data = importance.sort_values("importance", ascending=True)
     fig, ax = plt.subplots(figsize=(8, 5))
     ax.barh(data["feature"], data["importance"])
@@ -54,6 +82,14 @@ def plot_feature_importance(importance: pd.DataFrame, path: str | Path, title: s
 
 
 def plot_roc_curves(predictions: pd.DataFrame, model_names: list[str], path: str | Path) -> None:
+    """Plots out-of-sample Receiver Operating Characteristic (ROC) curves for candidate models.
+
+    Args:
+        predictions (pd.DataFrame): DataFrame containing true binary outcomes in the `actual`
+            column and predicted probabilities in `{model_name}_probability` columns.
+        model_names (list[str]): List of model identifier names to include in the plot.
+        path (str | Path): Destination file path where the plot figure will be saved.
+    """
     fig, ax = plt.subplots(figsize=(7, 6))
     for name in model_names:
         column = f"{name}_probability"
@@ -68,6 +104,16 @@ def plot_roc_curves(predictions: pd.DataFrame, model_names: list[str], path: str
 
 
 def plot_synthetic_regime_performance(scenarios: pd.DataFrame, path: str | Path) -> None:
+    """Creates a boxplot comparing net PnL differences across synthetic stress regimes.
+
+    Visualizes the distribution of performance improvements (ML-filtered strategy minus baseline PnL)
+    grouped by market regime.
+
+    Args:
+        scenarios (pd.DataFrame): Scenario backtest results DataFrame containing `regime` and
+            `ml_minus_baseline_pnl` columns.
+        path (str | Path): Destination file path where the plot figure will be saved.
+    """
     fig, ax = plt.subplots(figsize=(9, 5))
     regimes = list(scenarios["regime"].drop_duplicates())
     data = [scenarios.loc[scenarios["regime"] == regime, "ml_minus_baseline_pnl"].to_numpy() for regime in regimes]
@@ -84,6 +130,13 @@ def plot_synthetic_regime_performance(scenarios: pd.DataFrame, path: str | Path)
 
 
 def plot_scenario_spreads(sample_paths: pd.DataFrame, path: str | Path) -> None:
+    """Plots representative calibrated synthetic log-spread sample paths across scenarios.
+
+    Args:
+        sample_paths (pd.DataFrame): DataFrame containing simulated scenario paths with columns
+            `scenario_id`, `date`, `spread`, and `regime`.
+        path (str | Path): Destination file path where the plot figure will be saved.
+    """
     fig, ax = plt.subplots(figsize=(9, 5))
     for scenario_id, group in sample_paths.groupby("scenario_id"):
         ax.plot(group["date"], group["spread"], label=f"Scenario {scenario_id}: {group['regime'].iloc[0]}")
