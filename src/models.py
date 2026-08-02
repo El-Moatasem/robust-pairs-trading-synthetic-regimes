@@ -243,7 +243,7 @@ def train_models(
     split: TimeSplit,
     cfg: dict,
 ) -> tuple[dict[str, ModelBundle], pd.DataFrame, pd.DataFrame, str, dict]:
-"""Trains, tunes, and evaluates classification models across purged time-series splits.
+    """Trains, tunes, and evaluates classification models across purged time-series splits.
 
     Executes a disciplined two-stage training workflow:
     1. Fits base models on the training set and tunes decision thresholds on validation data.
