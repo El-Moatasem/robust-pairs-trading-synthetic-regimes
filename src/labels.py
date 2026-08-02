@@ -10,6 +10,27 @@ def build_convergence_labels(features: pd.DataFrame, cfg: dict) -> pd.DataFrame:
     A signal is accepted when the spread converges before hitting the stop within the configured
     horizon and the directionally signed spread return remains positive after estimated round-trip
     costs. Non-signal rows remain unlabeled and are excluded from model training.
+
+    Args:
+        features (pd.DataFrame): DataFrame containing feature time series. Must include
+            `signal_zscore`, `contemporaneous_zscore_for_outcomes`, and `spread` columns.
+        cfg (dict): Configuration dictionary containing label generation settings under
+            the `"labels"` key (e.g., `horizon_days`, `entry_zscore`, `convergence_zscore`,
+            `stop_loss_zscore`, `transaction_cost_bps_per_leg`, `slippage_bps_per_leg`,
+            and `minimum_net_return`).
+
+    Returns:
+        pd.DataFrame: DataFrame containing labeled entry points with columns:
+            - **accept_signal** (int): Binary target indicator (1 if trade converged with
+              positive net return > minimum threshold, 0 otherwise).
+            - **signal_direction** (float): Direction of the trade (-1.0 for short spread,
+              1.0 for long spread).
+            - **realized_holding_days** (int): Number of days held until convergence,
+              stop-loss, or horizon expiration.
+            - **realized_gross_return** (float): Unadjusted gross spread return.
+            - **realized_net_return** (float): Net return after deducting 4-leg round-trip costs.
+            - **label_exit_reason** (str): Cause of exit (`"convergence"`, `"stop_loss"`,
+              or `"horizon"`).
     """
     lcfg = cfg["labels"]
     horizon = int(lcfg["horizon_days"])
