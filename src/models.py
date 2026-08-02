@@ -28,6 +28,17 @@ from .splits import TimeSplit
 
 @dataclass
 class ModelBundle:
+    """Container holding a trained machine learning model along with its evaluation metrics and metadata.
+
+    Attributes:
+        name (str): The identifier or name of the algorithm (e.g., 'logistic_regression',
+            'random_forest', 'gradient_boosting').
+        model (Any): The fitted scikit-learn estimator or pipeline instance.
+        threshold (float): The optimal classification probability decision threshold selected on validation data.
+        validation_metrics (dict[str, float]): Dictionary of classification metrics evaluated on the validation set.
+        test_metrics (dict[str, float]): Dictionary of classification metrics evaluated on the test set.
+        feature_importance (pd.DataFrame): DataFrame containing feature names and their corresponding importance/coefficients.
+    """
     name: str
     model: Any
     threshold: float
@@ -37,6 +48,17 @@ class ModelBundle:
 
 
 def _catalog(random_state: int) -> dict[str, Any]:
+    """Initializes and returns the candidate machine learning model instances.
+
+    Configures default pipelines and classifiers (Logistic Regression, Random Forest,
+    and Gradient Boosting) with predefined hyperparameter settings and random state.
+
+    Args:
+        random_state (int): Seed for random number generators to ensure reproducibility.
+
+    Returns:
+        dict[str, Any]: A mapping of model identifier names to un-fitted scikit-learn models/pipelines.
+    """
     return {
         "logistic_regression": Pipeline(
             [
@@ -70,6 +92,18 @@ def _catalog(random_state: int) -> dict[str, Any]:
 
 
 def _positive_probability(model: Any, X: pd.DataFrame) -> np.ndarray:
+    """Extracts positive class (class 1) probabilities from a trained model.
+
+    Handles models with `.predict_proba()` or `.decision_function()` (applying sigmoid transformation),
+    and gracefully manages single-class prediction cases.
+
+    Args:
+        model (Any): Fitted scikit-learn estimator or pipeline.
+        X (pd.DataFrame): Feature matrix to generate probability predictions for.
+
+    Returns:
+        np.ndarray: 1D array of positive class probabilities bounded between 0.0 and 1.0.
+    """
     if hasattr(model, "predict_proba"):
         probabilities = model.predict_proba(X)
         if probabilities.shape[1] == 1:
@@ -82,6 +116,19 @@ def _positive_probability(model: Any, X: pd.DataFrame) -> np.ndarray:
 
 
 def _classification_metrics(y_true: pd.Series, probability: np.ndarray, threshold: float) -> dict[str, float]:
+    """Calculates comprehensive classification performance metrics at a specified decision threshold.
+
+    Computes accuracy, balanced accuracy, precision, recall, F1 score, ROC AUC, Brier score,
+    class prevalence, and confusion matrix counts (TN, FP, FN, TP).
+
+    Args:
+        y_true (pd.Series): True binary ground-truth labels (0 or 1).
+        probability (np.ndarray): Predicted positive-class probabilities.
+        threshold (float): Decision threshold probability cutoff for classifying positive predictions.
+
+    Returns:
+        dict[str, float]: Dictionary containing computed performance evaluation metrics.
+    """
     prediction = (probability >= threshold).astype(int)
     tn, fp, fn, tp = confusion_matrix(y_true, prediction, labels=[0, 1]).ravel()
     auc = float("nan") if y_true.nunique() < 2 else float(roc_auc_score(y_true, probability))
@@ -103,6 +150,22 @@ def _classification_metrics(y_true: pd.Series, probability: np.ndarray, threshol
 
 
 def _choose_threshold(y_val: pd.Series, probability: np.ndarray, thresholds: list[float], metric: str) -> tuple[float, dict[str, float]]:
+    """Selects the optimal probability decision threshold based on validation set performance.
+
+    Iterates through candidate thresholds to maximize a target metric (e.g., F1 score),
+    using precision as a tie-breaker.
+
+    Args:
+        y_val (pd.Series): True binary target labels for the validation split.
+        probability (np.ndarray): Predicted positive-class probabilities on the validation split.
+        thresholds (list[float]): List of candidate probability thresholds to evaluate.
+        metric (str): Name of the evaluation metric to maximize (e.g., 'f1', 'precision', 'accuracy').
+
+    Returns:
+        tuple[float, dict[str, float]]: A tuple containing:
+            - **best_threshold** (float): The optimal decision threshold.
+            - **best_metrics** (dict[str, float]): The validation metrics achieved at the optimal threshold.
+    """
     best_threshold = thresholds[0]
     best_metrics = _classification_metrics(y_val, probability, best_threshold)
     best_score = best_metrics.get(metric, best_metrics["f1"])
@@ -119,6 +182,21 @@ def _choose_threshold(y_val: pd.Series, probability: np.ndarray, thresholds: lis
 
 
 def _bootstrap_auc_ci(y: pd.Series, probability: np.ndarray, samples: int, seed: int) -> tuple[float, float]:
+    """Computes bootstrap confidence intervals for the ROC AUC metric.
+
+    Resamples predictions with replacement to generate a 95% confidence interval
+    (2.5th and 97.5th percentiles) for ROC AUC score.
+
+    Args:
+        y (pd.Series): True binary ground-truth labels.
+        probability (np.ndarray): Predicted positive-class probabilities.
+        samples (int): Number of bootstrap resampling iterations.
+        seed (int): Seed for random number generator reproducibility.
+
+    Returns:
+        tuple[float, float]: A tuple containing `(ci_low, ci_high)`. Returns `(NaN, NaN)` if
+            target labels lack both classes or if insufficient valid bootstrap runs occur.
+    """
     if y.nunique() < 2 or samples <= 0:
         return float("nan"), float("nan")
     rng = np.random.default_rng(seed)
@@ -136,6 +214,18 @@ def _bootstrap_auc_ci(y: pd.Series, probability: np.ndarray, samples: int, seed:
 
 
 def _feature_importance(name: str, model: Any) -> pd.DataFrame:
+    """Extracts feature importances or linear coefficients from a trained model.
+
+    Retrieves absolute coefficients for linear models or feature importances for tree-based
+    models, returning a sorted DataFrame.
+
+    Args:
+        name (str): Identifier name of the model type.
+        model (Any): Fitted scikit-learn estimator or pipeline.
+
+    Returns:
+        pd.DataFrame: DataFrame containing `feature` names and `importance` values sorted descending.
+    """
     if name == "logistic_regression" and hasattr(model, "named_steps"):
         values = np.abs(model.named_steps["classifier"].coef_[0])
     elif hasattr(model, "feature_importances_"):
@@ -153,6 +243,29 @@ def train_models(
     split: TimeSplit,
     cfg: dict,
 ) -> tuple[dict[str, ModelBundle], pd.DataFrame, pd.DataFrame, str, dict]:
+"""Trains, tunes, and evaluates classification models across purged time-series splits.
+
+    Executes a disciplined two-stage training workflow:
+    1. Fits base models on the training set and tunes decision thresholds on validation data.
+    2. Re-fits models on combined (train + validation) sets and evaluates on the test set.
+
+    Args:
+        features (pd.DataFrame): DataFrame containing engineered predictive feature columns.
+        labels (pd.DataFrame): DataFrame containing `accept_signal` and `realized_net_return`.
+        split (TimeSplit): Dataclass instance containing purged and embargoed temporal index splits.
+        cfg (dict): Configuration dictionary containing model settings under key `"models"`.
+
+    Returns:
+        tuple[dict[str, ModelBundle], pd.DataFrame, pd.DataFrame, str, dict]: A tuple containing:
+            - **bundles** (dict[str, ModelBundle]): Mapping of model names to `ModelBundle` containers.
+            - **metrics_table** (pd.DataFrame): Summary table comparing validation and test metrics.
+            - **prediction_frame** (pd.DataFrame): DataFrame with test actuals, net returns, and predictions.
+            - **selected_model** (str): Name of the top-performing model selected on validation metrics.
+            - **split_summary** (dict): Execution summary detailing sample counts, prevalences, and selection basis.
+
+    Raises:
+        ValueError: If sample counts across train, validation, or test splits fall below 10 observations.
+    """
     joined = features[MODEL_FEATURE_COLUMNS].join(labels[["accept_signal", "realized_net_return"]], how="inner")
     joined = joined.replace([np.inf, -np.inf], np.nan).dropna()
 
