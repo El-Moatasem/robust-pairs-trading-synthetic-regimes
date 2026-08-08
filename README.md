@@ -1,127 +1,139 @@
-# MScFE-690: ML-Enhanced Robust Equity Pairs Trading under Synthetic Market Regimes
+# ML-Enhanced Robust Equity Pairs Trading under Synthetic Market Regimes
 
-This repository contains the capstone research codebase for **ML-Enhanced Robust Equity Pairs Trading under Synthetic Market Regimes** under **Track 8 - Machine Learning (Deep) Investment Strategies**.
+This repository contains the revised MScFE 690 capstone research pipeline developed by **El Moatasem Madani and Henry A. Sada**.
 
-## Project summary
+The project tests whether machine learning can act as a **trade-decision filter** for a classical cointegration-based equity/ETF pairs-trading strategy. It does not use ML to predict raw prices. Instead, the models estimate whether a statistically identified spread deviation is likely to converge economically after costs and before a stop-loss or maximum holding horizon.
 
-Classical equity pairs trading assumes that two economically related securities maintain a stable spread and that temporary deviations will mean-revert. In practice, many apparent spread deviations are caused by volatility shocks, correlation breakdowns, liquidity changes, regime shifts, news-driven repricing, or transaction costs. This project studies whether machine learning and optional deep learning can improve a classical pairs-trading strategy by acting as a **decision layer** that accepts, rejects, or flags trade signals.
+## Current research status
 
-The project combines:
+This codebase incorporates the peer-review feedback received after the project-proposal stage. It is a corrected and reproducible research implementation, but the default run remains an **offline synthetic-data development run**. It should not be presented as evidence of historical profitability.
 
-- Classical statistical arbitrage and pairs trading.
-- Cointegration and spread-based baseline modeling.
-- ML trade filtering using logistic regression, random forest, and optional XGBoost.
-- Optional DL/regime modules such as LSTM, GRU, or autoencoder-based anomaly detection.
-- Synthetic market scenarios for robustness testing under volatility, jump, correlation-breakdown, mean-reversion, slippage, and transaction-cost regimes.
-- Model, trading, risk, robustness, and interpretability metrics.
+For the final empirical analysis, run `config/config_public.yaml` with internet access or provide a clean adjusted-close CSV at `data/raw/public_prices.csv`.
 
-## Repository description for GitHub
+## What was fixed
 
-MScFE-690 capstone research codebase for ML-enhanced equity pairs trading, synthetic market-regime robustness testing, cointegration-based statistical arbitrage, ML trade filtering, and risk-aware backtesting.
+The revised implementation now:
+
+- labels synthetic and public data explicitly and never silently presents synthetic ticker labels as historical evidence;
+- performs pair screening and hedge-ratio estimation only in the training window;
+- checks that both price series are plausibly I(1);
+- applies Engle-Granger, a matching residual ADF diagnostic, and Benjamini-Hochberg false-discovery control;
+- reports a pair as provisional if conservative diagnostics are not all satisfied;
+- freezes the cointegrating intercept and hedge ratio before validation and testing;
+- shifts all model predictors by one trading day;
+- defines the z-score, half-life, deviation persistence, and regime-stress proxy explicitly;
+- creates labels only at valid trade-entry signals and includes four-leg round-trip pair costs;
+- uses purged and embargoed chronological train/validation/test partitions;
+- selects the model and probability threshold using validation data only;
+- backtests every candidate model on the same untouched test period;
+- separates classification metrics from economic trading metrics;
+- reports block-bootstrap confidence intervals for test-period cumulative PnL and Sharpe ratio;
+- calibrates synthetic OU-style spread regimes from the training spread;
+- tests calm, high-volatility, jump, weak-mean-reversion, and stress regimes;
+- includes tests confirming no future-data changes alter past predictors.
+
 
 ## Repository structure
 
 ```text
-.
-├── config/
-│   └── config.yaml                  # Main experiment configuration
-├── data/
-│   ├── raw/                         # Raw downloaded or user-provided data
-│   └── processed/                   # Cleaned feature datasets
-├── docs/
-│   ├── initial_findings_template.md # Temporary-results report template
-│   └── literature_competitor_notes.md
-├── notebooks/
-│   └── README.md                    # Notebook guidance
-├── outputs/
-│   ├── figures/                     # Generated charts
-│   └── tables/                      # Generated CSV summaries
-├── scripts/
-│   └── run_smoke_test.py            # Quick verification script
-├── src/
-│   ├── data.py                      # Data download/load/cleaning
-│   ├── diagnostics.py               # ADF, cointegration, residual tests
-│   ├── pairs.py                     # Pair screening and ranking
-│   ├── features.py                  # Hedge ratio, spread, z-score, half-life features
-│   ├── labels.py                    # Trade label construction
-│   ├── backtest.py                  # Baseline and ML-filtered strategy backtests
-│   ├── models.py                    # ML trade-filter models
-│   ├── synthetic.py                 # Synthetic regime generation
-│   ├── evaluation.py                # Model/trading/risk metrics
-│   ├── reporting.py                 # Tables, summaries, and export helpers
-│   └── visualization.py             # Figure creation helpers
-├── tests/
-│   └── test_smoke.py                # Lightweight unit tests
-├── run_pipeline.py                  # End-to-end research pipeline
-├── single_file_demo.py              # Self-contained demo for copy/paste testing
-├── requirements.txt
-└── README.md
+config/config.yaml                 Reproducible offline synthetic development run
+config/config_public.yaml          Strict public-data run; fails if data cannot be loaded
+run_pipeline.py                    End-to-end revised research pipeline
+single_file_demo.py                Minimal offline demonstration
+src/data.py                        Public-data loading and cointegrated synthetic generator
+src/splits.py                      Purged chronological train/validation/test split
+src/pairs.py                       I(1), correlation, Engle-Granger, residual ADF, FDR screening
+src/features.py                    Lagged feature engineering without future information
+src/labels.py                      Cost-aware convergence labels at valid entry signals
+src/models.py                      Validation-only model and threshold selection
+src/backtest.py                    Test-period baseline and ML-filtered backtests
+src/synthetic.py                   Calibrated synthetic regime generation and evaluation
+src/visualization.py               Report-ready figures
+src/evaluation.py                  Reproducible findings summary
+scripts/run_smoke_test.py          End-to-end smoke test
+scripts/verify_outputs.py          Checks required outputs and key research controls
+tests/test_research_controls.py    Unit tests for cointegration, leakage, labels, and splits
+docs/METHODOLOGY.md                Mathematical definitions and assumptions
+docs/PEER_REVIEW_RESPONSE.md       Peer-review issue-to-fix matrix
+docs/RUN_INSTRUCTIONS.md           Detailed setup and run guide
+docs/module2_archive/              Preserved earlier work
+docs/module3_archive/              Preserved earlier code documentation
+outputs/                            Current reproducible synthetic-development results
 ```
 
-## Important code sections to highlight in the report
-
-| File | Why it matters |
-|---|---|
-| `src/pairs.py` | Screens candidate equity/ETF pairs using correlation and cointegration diagnostics. |
-| `src/features.py` | Constructs spreads, hedge ratios, z-scores, rolling volatility/correlation, drawdown, and half-life features. |
-| `src/labels.py` | Converts historical trading signals into ML targets such as accept/reject or probability of convergence. |
-| `src/models.py` | Trains logistic regression, random forest, and optional XGBoost trade-filter models. |
-| `src/backtest.py` | Compares classical baseline, risk-aware baseline, and ML-filtered strategy variants after transaction costs. |
-| `src/synthetic.py` | Generates synthetic spread regimes for robustness testing under volatility, jumps, correlation breakdowns, mean reversion, slippage, and costs. |
-| `run_pipeline.py` | Runs the full research workflow and exports initial findings. |
-
-## Setup
-
-Create a virtual environment and install dependencies:
+## Setup on macOS or Linux
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+cd robust-pairs-trading-synthetic-regimes
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
-## Run a smoke test
-
-```bash
-python scripts/run_smoke_test.py
-```
-
-This uses generated sample data and verifies that the main modules work without requiring internet access.
-
-## Run the full pipeline
+## Run the offline reproducible pipeline
 
 ```bash
 python run_pipeline.py --config config/config.yaml
 ```
 
-The pipeline will:
+## Run with public adjusted-close data
 
-1. Load public price data if available, or generate a synthetic sample if `use_sample_data: true` is enabled.
-2. Screen candidate pairs.
-3. Build spread and regime features.
-4. Generate baseline pairs-trading signals.
-5. Build ML labels.
-6. Train ML trade filters.
-7. Run baseline and ML-filtered backtests.
-8. Generate synthetic market-regime scenarios.
-9. Export tables and figures into `outputs/`.
+```bash
+python run_pipeline.py --config config/config_public.yaml --require-public-data
+```
 
-## Configuration
+Public mode intentionally fails if data cannot be downloaded or loaded from the configured cache. This prevents an unnoticed fallback from being reported as a historical-data result.
 
-Edit `config/config.yaml` to change:
+## Run tests and verification
 
-- Tickers and date range.
-- Pair-screening thresholds.
-- Entry/exit z-score thresholds.
-- Transaction costs.
-- ML model selection.
-- Synthetic-regime parameters.
+```bash
+python -m pytest -q
+python scripts/run_smoke_test.py
+python scripts/verify_outputs.py --outputs outputs
+```
 
-## Current status
+Expected unit-test result:
 
-This repository is an **initial capstone research implementation**. It is not a production trading system. The current focus is to support the literature review, competitor analysis, initial findings, and reproducible research workflow. Future milestones include expanding robustness tests, improving model validation, adding additional metrics, and optionally adding a deeper sequential model.
+```text
+4 passed
+```
 
+Expected pipeline completion messages include:
 
-## Academic note
+```text
+Pipeline completed successfully.
+Pair-selection window ends: ...
+Selected model (validation only): ...
+Test window: ...
+```
 
-The repository supports a research workflow only. It does not provide investment advice, live trading recommendations, or a production-ready trading platform.
+## Main outputs
+
+```text
+outputs/run_summary.json
+outputs/initial_findings.md
+outputs/config_used.yaml
+outputs/tables/data_summary.json
+outputs/tables/time_split_summary.json
+outputs/tables/candidate_pairs.csv
+outputs/tables/feature_definitions.csv
+outputs/tables/labels.csv
+outputs/tables/model_metrics.csv
+outputs/tables/strategy_metrics_test.csv
+outputs/tables/synthetic_calibration.json
+outputs/tables/synthetic_regime_summary.csv
+outputs/figures/pair_spread_and_signal.png
+outputs/figures/out_of_sample_equity_comparison.png
+outputs/figures/out_of_sample_roc_curves.png
+outputs/figures/selected_model_feature_importance.png
+outputs/figures/synthetic_regime_performance.png
+```
+
+## Current reproducible synthetic-development finding
+
+The current default run selected XOM-CVX from a deliberately cointegrated synthetic universe using the training window only. The conservative diagnostics agreed in this revised generator. Random forest was selected using validation F1, but its test AUC was below 0.5, which indicates poor out-of-sample generalization. A logistic-regression filter produced the strongest test-period Sharpe among the reported variants, but it was not the model selected in advance by validation. Therefore, the current result does **not** establish that ML robustly improves the strategy. It demonstrates a corrected evaluation workflow and identifies the next empirical questions for the public-data run.
+
+## Reproducibility note
+
+The default synthetic generator creates designated pairs using a shared I(1) stochastic trend plus a stationary AR(1) residual. The synthetic results are useful for software verification, leakage testing, and scenario analysis. They are not substitutes for the final public equity/ETF analysis.

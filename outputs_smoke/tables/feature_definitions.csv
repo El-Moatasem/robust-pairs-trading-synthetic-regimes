@@ -1,0 +1,10 @@
+feature,definition
+signal_zscore,Lagged rolling z-score of the fixed-hedge-ratio log spread.
+abs_zscore,Absolute value of the lagged spread z-score.
+spread_change_lagged,One-period lagged change in the log spread.
+spread_volatility,Lagged rolling standard deviation of spread changes.
+rolling_corr,Lagged rolling correlation of the two assets' log returns.
+spread_drawdown,Lagged spread minus its rolling maximum.
+half_life,Lagged rolling AR(1)/OU half-life estimate in trading days.
+deviation_persistence,Lagged count of consecutive observations with |z| above the configured threshold.
+regime_stress_proxy,Equal-weighted rolling percentile of spread volatility and weakening correlation.

@@ -1,32 +1,51 @@
-"""Self-contained demo for reviewers who want one copy/paste file.
+"""Minimal offline demonstration of a cointegrated spread and lagged z-score backtest.
 
-This script generates sample prices, screens a pair, constructs a spread, runs a
-z-score strategy, and prints basic metrics. It intentionally avoids internet
-access and optional packages.
+Run:
+    python single_file_demo.py
+
+The demo is deliberately small. The full research controls are implemented in run_pipeline.py.
 """
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 
-rng = np.random.default_rng(42)
-dates = pd.bdate_range(end=pd.Timestamp.today().normalize(), periods=600)
-base = rng.normal(0.0002, 0.01, len(dates)).cumsum()
-a = np.exp(np.log(100) + base + rng.normal(0, 0.005, len(dates)).cumsum())
-b = np.exp(np.log(95) + 0.95 * base + rng.normal(0, 0.006, len(dates)).cumsum())
-prices = pd.DataFrame({"Asset_A": a, "Asset_B": b}, index=dates)
 
-beta = np.polyfit(prices["Asset_B"], prices["Asset_A"], 1)[0]
-spread = prices["Asset_A"] - beta * prices["Asset_B"]
-z = (spread - spread.rolling(30).mean()) / spread.rolling(30).std()
-position = pd.Series(0, index=dates, dtype=float)
-position[z <= -2] = 1
-position[z >= 2] = -1
-position = position.replace(0, np.nan).ffill().fillna(0)
-position[z.abs() <= 0.5] = 0
-position[z.abs() >= 3.5] = 0
-pnl = position.shift(1).fillna(0) * spread.diff().fillna(0)
+def main() -> None:
+    rng = np.random.default_rng(42)
+    dates = pd.bdate_range("2023-01-02", periods=650)
+    common_log_price = np.log(100.0) + np.cumsum(rng.normal(0.0002, 0.01, len(dates)))
+    residual = np.zeros(len(dates))
+    for i in range(1, len(dates)):
+        residual[i] = 0.96 * residual[i - 1] + rng.normal(0.0, 0.005)
+    log_b = common_log_price
+    log_a = 0.20 + 0.95 * log_b + residual
+    spread = pd.Series(log_a - 0.20 - 0.95 * log_b, index=dates)
+    zscore = ((spread - spread.rolling(30).mean()) / spread.rolling(30).std(ddof=0)).shift(1)
 
-print("Pair: Asset_A / Asset_B")
-print(f"Hedge ratio: {beta:.4f}")
-print(f"Cumulative PnL: {pnl.sum():.4f}")
-print(f"Sharpe: {np.sqrt(252) * pnl.mean() / pnl.std(ddof=0):.4f}")
-print(f"Max drawdown: {(pnl.cumsum() - pnl.cumsum().cummax()).min():.4f}")
+    position = pd.Series(0.0, index=dates)
+    current = 0.0
+    for i in range(1, len(zscore)):
+        z = zscore.iloc[i]
+        if not np.isfinite(z):
+            continue
+        if current == 0.0 and abs(z) >= 1.5:
+            current = -float(np.sign(z))
+        elif current != 0.0 and (abs(z) <= 0.25 or abs(z) >= 3.0):
+            current = 0.0
+        position.iloc[i] = current
+
+    pnl = position.shift(1).fillna(0.0) * spread.diff().fillna(0.0)
+    cumulative = pnl.cumsum()
+    sharpe = np.sqrt(252) * pnl.mean() / (pnl.std(ddof=0) + 1e-12)
+    drawdown = cumulative - cumulative.cummax()
+    print("Single-file demo completed.")
+    print("Data source: offline synthetic cointegrated pair")
+    print("Signal timing: one-day lag")
+    print(f"Cumulative PnL: {cumulative.iloc[-1]:.4f}")
+    print(f"Sharpe ratio: {sharpe:.4f}")
+    print(f"Maximum drawdown: {drawdown.min():.4f}")
+
+
+if __name__ == "__main__":
+    main()

@@ -4,57 +4,85 @@ import numpy as np
 import pandas as pd
 
 
-def build_convergence_labels(
-    signal_df: pd.DataFrame,
-    exit_z: float = 0.5,
-    max_holding_days: int = 20,
-    transaction_cost_proxy: float = 0.0,
-) -> pd.DataFrame:
-    """Label each trade candidate by profitable convergence after costs.
+def build_convergence_labels(features: pd.DataFrame, cfg: dict) -> pd.DataFrame:
+    """Create economic accept/reject labels only at valid entry-signal timestamps.
 
-    A positive label means a signal both converges toward the exit threshold and
-    produces positive spread PnL over the forward window after a transaction-cost
-    proxy. This is intentionally more conservative than a pure convergence label
-    and usually creates both accepted and rejected examples for ML training.
+    A signal is accepted when the spread converges before hitting the stop within the configured
+    horizon and the directionally signed spread return remains positive after estimated round-trip
+    costs. Non-signal rows remain unlabeled and are excluded from model training.
     """
-    df = signal_df.copy()
-    z = df["zscore"].values
-    spread = df["spread"].values
-    raw_signal = df["raw_signal"].values
-    labels = np.zeros(len(df), dtype=int)
-    forward_min_abs_z = np.full(len(df), np.nan)
-    forward_pnl = np.full(len(df), np.nan)
-    for i in range(len(df)):
-        end = min(i + max_holding_days + 1, len(df))
-        if i + 1 >= end:
+    lcfg = cfg["labels"]
+    horizon = int(lcfg["horizon_days"])
+    entry_z = float(lcfg["entry_zscore"])
+    convergence_z = float(lcfg["convergence_zscore"])
+    stop_z = float(lcfg["stop_loss_zscore"])
+    per_leg_cost = (
+        float(lcfg.get("transaction_cost_bps_per_leg", 0.0))
+        + float(lcfg.get("slippage_bps_per_leg", 0.0))
+    ) / 10000.0
+    # A complete pair trade has two asset legs at entry and two at exit.
+    round_trip_cost = 4.0 * per_leg_cost
+    minimum_net_return = float(lcfg.get("minimum_net_return", 0.0))
+
+    result = pd.DataFrame(
+        index=features.index,
+        columns=[
+            "accept_signal",
+            "signal_direction",
+            "realized_holding_days",
+            "realized_gross_return",
+            "realized_net_return",
+            "label_exit_reason",
+        ],
+    )
+    signal_z = features["signal_zscore"]
+    outcome_z = features["contemporaneous_zscore_for_outcomes"]
+    spread = features["spread"]
+
+    for i in range(len(features) - horizon):
+        current_signal_z = float(signal_z.iloc[i])
+        if not np.isfinite(current_signal_z) or abs(current_signal_z) < entry_z:
             continue
-        future_abs = np.abs(z[i + 1:end])
-        forward_min_abs_z[i] = np.nanmin(future_abs)
-        horizon_idx = end - 1
-        # long spread gains when spread rises; short spread gains when spread falls
-        pnl = raw_signal[i] * (spread[horizon_idx] - spread[i])
-        pnl -= transaction_cost_proxy
-        forward_pnl[i] = pnl
-        converged = np.nanmin(future_abs) <= exit_z
-        labels[i] = int(converged and pnl > 0)
-    df["forward_min_abs_z"] = forward_min_abs_z
-    df["forward_pnl_proxy"] = forward_pnl
-    df["converged_label"] = labels
-    df["is_trade_candidate"] = (df["raw_signal"].abs() > 0).astype(int)
-    return df
+        direction = -float(np.sign(current_signal_z))
+        entry_spread = float(spread.iloc[i])
+        accepted = False
+        exit_reason = "horizon"
+        exit_offset = horizon
+        gross_return = direction * (float(spread.iloc[i + horizon]) - entry_spread)
+        for offset in range(1, horizon + 1):
+            future_z = float(outcome_z.iloc[i + offset])
+            gross = direction * (float(spread.iloc[i + offset]) - entry_spread)
+            if abs(future_z) >= stop_z:
+                exit_reason = "stop_loss"
+                exit_offset = offset
+                gross_return = gross
+                break
+            if abs(future_z) <= convergence_z:
+                exit_reason = "convergence"
+                exit_offset = offset
+                gross_return = gross
+                accepted = (gross - round_trip_cost) > minimum_net_return
+                break
+        net_return = gross_return - round_trip_cost
+        result.iloc[i] = [
+            int(accepted),
+            direction,
+            int(exit_offset),
+            float(gross_return),
+            float(net_return),
+            exit_reason,
+        ]
 
-
-def get_model_dataset(labeled_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
-    feature_cols = [
-        "abs_zscore",
-        "spread_volatility",
-        "rolling_corr",
-        "pair_return_diff",
-        "drawdown_a",
-        "drawdown_b",
-        "half_life",
+    numeric_cols = [
+        "accept_signal",
+        "signal_direction",
+        "realized_holding_days",
+        "realized_gross_return",
+        "realized_net_return",
     ]
-    data = labeled_df[labeled_df["is_trade_candidate"] == 1].dropna(subset=feature_cols + ["converged_label"])
-    X = data[feature_cols]
-    y = data["converged_label"].astype(int)
-    return X, y
+    for col in numeric_cols:
+        result[col] = pd.to_numeric(result[col], errors="coerce")
+    labeled = result.dropna(subset=["accept_signal"]).copy()
+    labeled["accept_signal"] = labeled["accept_signal"].astype(int)
+    labeled["realized_holding_days"] = labeled["realized_holding_days"].astype(int)
+    return labeled

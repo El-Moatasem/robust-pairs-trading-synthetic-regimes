@@ -1,11 +1,11 @@
 .venv/
+venv/
 __pycache__/
-*.pyc
+*.py[cod]
+.pytest_cache/
+.idea/
 .DS_Store
-.env
-.ipynb_checkpoints/
+__MACOSX/
+outputs/models/*.joblib
 data/raw/*.csv
 data/processed/*.csv
-outputs/figures/*.png
-outputs/tables/*.csv
-outputs/*.log

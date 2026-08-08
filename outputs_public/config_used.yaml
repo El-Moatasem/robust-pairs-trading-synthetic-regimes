@@ -1,0 +1,82 @@
+project:
+  name: ML-Enhanced Robust Equity Pairs Trading under Synthetic Market Regimes
+  version: revised-public-data-run
+  random_seed: 42
+
+data:
+  mode: public
+  tickers: [KO, PEP, XOM, CVX, JPM, BAC, MSFT, AAPL, SPY, QQQ]
+  start: '2018-01-01'
+  end: '2026-06-30'
+  frequency: daily
+  fallback_days: 1800
+  cache_csv: data/raw/public_prices.csv
+
+split:
+  pair_selection_fraction: 0.50
+  validation_fraction: 0.20
+  test_fraction: 0.30
+  purge_horizon_days: 10
+  embargo_days: 2
+
+pair_selection:
+  min_abs_corr: 0.45
+  max_eg_pvalue: 0.10
+  max_residual_adf_pvalue: 0.10
+  fdr_alpha: 0.10
+  require_i1: true
+  require_both_cointegration_diagnostics: true
+  allow_best_available: true
+  top_n: 10
+
+features:
+  lookback_zscore: 30
+  lookback_volatility: 20
+  lookback_correlation: 60
+  lookback_drawdown: 60
+  half_life_window: 120
+  persistence_threshold_z: 1.0
+  stress_window: 252
+  lag_predictors_by_days: 1
+
+labels:
+  horizon_days: 10
+  entry_zscore: 1.5
+  convergence_zscore: 0.25
+  stop_loss_zscore: 3.0
+  transaction_cost_bps_per_leg: 2.0
+  slippage_bps_per_leg: 1.0
+  minimum_net_return: 0.0
+
+models:
+  random_state: 42
+  algorithms: [logistic_regression, random_forest, gradient_boosting]
+  threshold_grid: [0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70]
+  selection_metric: f1
+  bootstrap_samples: 250
+
+backtest:
+  entry_z: 1.5
+  exit_z: 0.25
+  stop_z: 3.0
+  max_holding_days: 20
+  transaction_cost_bps_per_leg: 2.0
+  slippage_bps_per_leg: 1.0
+  annual_risk_free_rate: 0.0
+  annualization_factor: 252
+  bootstrap_samples: 250
+  bootstrap_block_length: 10
+
+synthetic:
+  n_scenarios: 30
+  scenario_length: 252
+  seed: 42
+  regimes:
+    calm: {volatility_multiplier: 0.75, mean_reversion_multiplier: 1.25, jump_probability_multiplier: 0.50, jump_size_multiplier: 0.75, long_run_mean_shift_std: 0.00}
+    high_volatility: {volatility_multiplier: 1.60, mean_reversion_multiplier: 0.90, jump_probability_multiplier: 1.20, jump_size_multiplier: 1.20, long_run_mean_shift_std: 0.10}
+    jump: {volatility_multiplier: 1.20, mean_reversion_multiplier: 0.80, jump_probability_multiplier: 4.00, jump_size_multiplier: 2.50, long_run_mean_shift_std: 0.15}
+    weak_mean_reversion: {volatility_multiplier: 1.10, mean_reversion_multiplier: 0.30, jump_probability_multiplier: 1.00, jump_size_multiplier: 1.00, long_run_mean_shift_std: 0.25}
+    stress: {volatility_multiplier: 2.20, mean_reversion_multiplier: 0.20, jump_probability_multiplier: 5.00, jump_size_multiplier: 3.00, long_run_mean_shift_std: 0.75}
+
+outputs:
+  dir: outputs_public

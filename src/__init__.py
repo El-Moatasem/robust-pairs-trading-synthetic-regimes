@@ -1,1 +1,1 @@
-"""Capstone research package for ML-enhanced pairs trading."""
+"""Research package for the MScFE 690 robust pairs-trading capstone."""

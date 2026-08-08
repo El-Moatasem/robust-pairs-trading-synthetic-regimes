@@ -1,0 +1,11 @@
+{
+  "source": "yfinance_auto_adjusted_close",
+  "mode_requested": "public",
+  "is_synthetic": false,
+  "fallback_reason": null,
+  "frequency": "daily",
+  "n_assets": 10,
+  "n_observations": 2133,
+  "start": "2018-01-02",
+  "end": "2026-06-29"
+}

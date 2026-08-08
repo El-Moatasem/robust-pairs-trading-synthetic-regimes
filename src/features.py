@@ -2,75 +2,134 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from .diagnostics import estimate_hedge_ratio
+
+from .pairs import build_spread
 
 
-def rolling_zscore(series: pd.Series, window: int = 30) -> pd.Series:
-    mean = series.rolling(window).mean()
-    std = series.rolling(window).std(ddof=0)
-    return (series - mean) / std.replace(0, np.nan)
+MODEL_FEATURE_COLUMNS = [
+    "signal_zscore",
+    "abs_zscore",
+    "spread_change_lagged",
+    "spread_volatility",
+    "rolling_corr",
+    "spread_drawdown",
+    "half_life",
+    "deviation_persistence",
+    "regime_stress_proxy",
+]
 
 
-def estimate_half_life(spread: pd.Series) -> float:
-    """Estimate mean-reversion half-life using AR(1)-style regression."""
-    s = spread.dropna()
-    if len(s) < 60:
-        return np.nan
-    lagged = s.shift(1).dropna()
-    delta = s.diff().dropna()
-    aligned = pd.concat([lagged, delta], axis=1).dropna()
-    if aligned.empty:
-        return np.nan
-    x = aligned.iloc[:, 0].values
-    y = aligned.iloc[:, 1].values
-    beta = np.polyfit(x, y, 1)[0]
-    if beta >= 0:
-        return np.inf
-    return float(-np.log(2) / beta)
+def rolling_zscore(series: pd.Series, window: int) -> pd.Series:
+    mean = series.rolling(window=window, min_periods=window).mean()
+    std = series.rolling(window=window, min_periods=window).std(ddof=0).replace(0.0, np.nan)
+    return (series - mean) / std
 
 
-def construct_pair_features(
+def _rolling_half_life(spread: pd.Series, window: int) -> pd.Series:
+    """Estimate the rolling mean-reversion half-life without repeated OLS fits.
+
+    For each trailing spread window we estimate the slope in
+    ``Delta s_t = a + b s_(t-1) + u_t``.  With an intercept, the OLS slope is
+    simply Cov(s_(t-1), Delta s_t) / Var(s_(t-1)), so rolling covariance and
+    variance give the same slope much faster than fitting one statsmodels model
+    per timestamp.  A negative slope implies mean reversion and yields
+    ``half_life = -ln(2) / b``.
+    """
+    pair_window = max(2, int(window) - 1)
+    min_periods = max(39, int(window) // 2 - 1)
+    lagged = spread.shift(1)
+    delta = spread.diff()
+    covariance = lagged.rolling(pair_window, min_periods=min_periods).cov(delta)
+    variance = lagged.rolling(pair_window, min_periods=min_periods).var()
+    beta = covariance / variance.replace(0.0, np.nan)
+    half_life = (-np.log(2.0) / beta).where(beta < -1e-8)
+    return half_life.clip(upper=252.0).ffill()
+
+
+def _consecutive_deviation_count(abs_zscore: pd.Series, threshold: float) -> pd.Series:
+    values = abs_zscore.fillna(0.0).to_numpy()
+    counts = np.zeros(len(values), dtype=float)
+    current = 0
+    for i, value in enumerate(values):
+        if value >= threshold:
+            current += 1
+        else:
+            current = 0
+        counts[i] = current
+    return pd.Series(counts, index=abs_zscore.index, dtype=float)
+
+
+def _rolling_percentile_last(series: pd.Series, window: int) -> pd.Series:
+    def percentile(values: np.ndarray) -> float:
+        if len(values) == 0 or not np.isfinite(values[-1]):
+            return np.nan
+        finite = values[np.isfinite(values)]
+        if len(finite) < 10:
+            return np.nan
+        return float((finite <= values[-1]).mean())
+
+    return series.rolling(window=window, min_periods=max(20, window // 4)).apply(percentile, raw=True)
+
+
+def build_feature_frame(
     prices: pd.DataFrame,
     asset_a: str,
     asset_b: str,
-    zscore_window: int = 30,
-    volatility_window: int = 30,
-    correlation_window: int = 60,
+    cfg: dict,
+    alpha: float,
+    hedge_ratio: float,
 ) -> pd.DataFrame:
-    """Create pair-level spread and risk/regime features."""
-    y = prices[asset_a]
-    x = prices[asset_b]
-    hedge_ratio = estimate_hedge_ratio(y, x)
-    spread = y - hedge_ratio * x
-    returns_a = y.pct_change()
-    returns_b = x.pct_change()
-    z = rolling_zscore(spread, zscore_window)
-    spread_ret = spread.diff()
-    features = pd.DataFrame(index=prices.index)
-    features["asset_a"] = asset_a
-    features["asset_b"] = asset_b
-    features["price_a"] = y
-    features["price_b"] = x
-    features["hedge_ratio"] = hedge_ratio
-    features["spread"] = spread
-    features["spread_change"] = spread_ret
-    features["zscore"] = z
-    features["abs_zscore"] = z.abs()
-    features["spread_volatility"] = spread_ret.rolling(volatility_window).std()
-    features["rolling_corr"] = returns_a.rolling(correlation_window).corr(returns_b)
-    features["pair_return_diff"] = returns_a - returns_b
-    features["drawdown_a"] = y / y.cummax() - 1
-    features["drawdown_b"] = x / x.cummax() - 1
-    features["half_life"] = estimate_half_life(spread)
-    features = features.replace([np.inf, -np.inf], np.nan).dropna()
-    return features
+    """Build a no-look-ahead feature frame using a fixed training-period hedge ratio.
 
+    The raw spread is retained for realized PnL. Every predictor used by the ML model and trading
+    signal is shifted by `lag_predictors_by_days`, so a decision timestamp never uses the same-day
+    close that generates its subsequent PnL.
+    """
+    fcfg = cfg["features"]
+    pair = prices[[asset_a, asset_b]].dropna().copy()
+    spread = build_spread(pair[asset_a], pair[asset_b], alpha=alpha, hedge_ratio=hedge_ratio)
+    returns_a = np.log(pair[asset_a]).diff()
+    returns_b = np.log(pair[asset_b]).diff()
 
-def build_features_for_pairs(prices: pd.DataFrame, pairs: pd.DataFrame, **kwargs) -> pd.DataFrame:
-    frames = []
-    for _, row in pairs.iterrows():
-        f = construct_pair_features(prices, row["asset_a"], row["asset_b"], **kwargs)
-        frames.append(f)
-    if not frames:
-        return pd.DataFrame()
-    return pd.concat(frames).sort_index()
+    raw_zscore = rolling_zscore(spread, int(fcfg["lookback_zscore"]))
+    raw_spread_change = spread.diff()
+    raw_volatility = raw_spread_change.rolling(
+        int(fcfg["lookback_volatility"]), min_periods=int(fcfg["lookback_volatility"])
+    ).std(ddof=0)
+    raw_corr = returns_a.rolling(
+        int(fcfg["lookback_correlation"]), min_periods=int(fcfg["lookback_correlation"])
+    ).corr(returns_b)
+    rolling_peak = spread.rolling(
+        int(fcfg["lookback_drawdown"]), min_periods=int(fcfg["lookback_drawdown"])
+    ).max()
+    raw_drawdown = spread - rolling_peak
+    raw_half_life = _rolling_half_life(spread, int(fcfg.get("half_life_window", 120)))
+    raw_persistence = _consecutive_deviation_count(
+        raw_zscore.abs(), float(fcfg.get("persistence_threshold_z", 1.0))
+    )
+
+    stress_window = int(fcfg.get("stress_window", 252))
+    volatility_pct = _rolling_percentile_last(raw_volatility, stress_window)
+    weakening_corr_pct = _rolling_percentile_last(-raw_corr, stress_window)
+    raw_stress = 0.5 * volatility_pct + 0.5 * weakening_corr_pct
+
+    lag = int(fcfg.get("lag_predictors_by_days", 1))
+    frame = pd.DataFrame(index=pair.index)
+    frame["asset_a_price"] = pair[asset_a]
+    frame["asset_b_price"] = pair[asset_b]
+    frame["alpha"] = alpha
+    frame["hedge_ratio"] = hedge_ratio
+    frame["spread"] = spread
+    frame["contemporaneous_zscore_for_outcomes"] = raw_zscore
+    frame["signal_zscore"] = raw_zscore.shift(lag)
+    frame["abs_zscore"] = raw_zscore.abs().shift(lag)
+    frame["spread_change_lagged"] = raw_spread_change.shift(lag)
+    frame["spread_volatility"] = raw_volatility.shift(lag)
+    frame["rolling_corr"] = raw_corr.shift(lag)
+    frame["spread_drawdown"] = raw_drawdown.shift(lag)
+    frame["half_life"] = raw_half_life.shift(lag)
+    frame["deviation_persistence"] = raw_persistence.shift(lag)
+    frame["regime_stress_proxy"] = raw_stress.shift(lag)
+    frame["asset_a"] = asset_a
+    frame["asset_b"] = asset_b
+    return frame.replace([np.inf, -np.inf], np.nan).dropna(subset=MODEL_FEATURE_COLUMNS + ["spread"])
