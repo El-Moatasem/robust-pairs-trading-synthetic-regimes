@@ -26,7 +26,7 @@ These outputs are research-development results. They do not constitute investmen
 - calm: ML outperformed baseline in 33.3% of scenarios; mean PnL difference 0.0029.
 - high_volatility: ML outperformed baseline in 0.0% of scenarios; mean PnL difference -0.0731.
 - jump: ML outperformed baseline in 50.0% of scenarios; mean PnL difference -0.0503.
-- stress: ML outperformed baseline in 50.0% of scenarios; mean PnL difference 0.0610.
+- stress: ML outperformed baseline in 66.7% of scenarios; mean PnL difference 0.0860.
 - weak_mean_reversion: ML outperformed baseline in 33.3% of scenarios; mean PnL difference -0.0108.
 
 ## Interpretation

@@ -133,6 +133,8 @@ m7:
     max_folds: 3
     algorithms:
     - logistic_regression
+    - random_forest
+    - gradient_boosting
   significance_sensitivity_levels:
   - 0.1
   - 0.05
