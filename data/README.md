@@ -1,10 +1,19 @@
 # Data directory
 
-The submitted M6 ZIP does not need to contain private or externally downloaded market data.
+The final submission includes the public verification cache used for the reported 10-asset experiment:
 
-For strict public-data mode, either:
+```text
+data/raw/public_prices.csv
+```
 
-1. allow `yfinance` to download the configured tickers, or
-2. place a clean adjusted-close CSV at `data/raw/public_prices.csv`.
+It contains adjusted-close daily prices for AAPL, BAC, CVX, JPM, KO, MSFT, PEP, QQQ, SPY, and XOM from 2018-01-02 through 2026-06-29. The pipeline validates that requested tickers are present and reorders cached columns to the configured ticker list before analysis.
 
-The first column should be a parseable date index and the remaining columns should be ticker price series. The pipeline records whether the final run was synthetic or public in `outputs*/tables/data_summary.json`.
+Strict public mode can also download a fresh dataset with `yfinance` if the cache is removed and internet access is available. It does not silently fall back to synthetic data.
+
+The optional ETF extension uses:
+
+```text
+data/raw/etf_prices.csv
+```
+
+That ETF cache is not included because the ETF extension was not used to produce the reported final conclusions. Running `config/config_m7_etf.yaml` with internet access will create it automatically.

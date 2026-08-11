@@ -1,0 +1,10 @@
+feature,importance
+spread_volatility,0.23388716946673488
+regime_stress_proxy,0.1977528047851236
+half_life,0.14337648039645867
+spread_drawdown,0.1030773966750058
+rolling_corr,0.10273492608886542
+abs_zscore,0.0886518669548314
+spread_change_lagged,0.04972895391183022
+signal_zscore,0.04823111706785105
+deviation_persistence,0.032559284653298874

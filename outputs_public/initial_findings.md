@@ -3,7 +3,7 @@
 These outputs are research-development results. They do not constitute investment advice or final evidence of profitability.
 
 ## Data and leakage controls
-- Data source: `yfinance_auto_adjusted_close`.
+- Data source: `cached_public_adjusted_close:data/raw/public_prices.csv`.
 - Synthetic data used: `False`.
 - Pair selection was performed only through 2022-03-11.
 - Purge horizon: 10 days; embargo: 2 days.
@@ -26,7 +26,7 @@ These outputs are research-development results. They do not constitute investmen
 - calm: ML outperformed baseline in 33.3% of scenarios; mean PnL difference 0.0029.
 - high_volatility: ML outperformed baseline in 0.0% of scenarios; mean PnL difference -0.0731.
 - jump: ML outperformed baseline in 50.0% of scenarios; mean PnL difference -0.0503.
-- stress: ML outperformed baseline in 66.7% of scenarios; mean PnL difference 0.0860.
+- stress: ML outperformed baseline in 50.0% of scenarios; mean PnL difference 0.0610.
 - weak_mean_reversion: ML outperformed baseline in 33.3% of scenarios; mean PnL difference -0.0108.
 
 ## Interpretation

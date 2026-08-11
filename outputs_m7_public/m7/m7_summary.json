@@ -1,0 +1,37 @@
+{
+  "data": {
+    "source": "cached_public_adjusted_close:data/raw/public_prices.csv",
+    "mode_requested": "public",
+    "is_synthetic": false,
+    "fallback_reason": null,
+    "frequency": "daily",
+    "n_assets": 10,
+    "n_observations": 2133,
+    "start": "2018-01-02",
+    "end": "2026-06-29"
+  },
+  "fixed_split_selected_pair": "KO-PEP",
+  "fixed_split_pair_status": "provisional",
+  "fixed_split_pairs_passing_all": 0,
+  "fixed_split_selected_model": "logistic_regression",
+  "walk_forward_folds": 3,
+  "walk_forward_folds_with_full_pair_pass": 2,
+  "walk_forward_passed_and_profitable_folds": 1,
+  "prespecified_passed_and_profitable_cases": 1,
+  "independent_backtest_baseline_match": true,
+  "independent_backtest_selected_model_match": true,
+  "eda_figures": [
+    "outputs_m7_public/m7/figures/eda_normalized_prices.png",
+    "outputs_m7_public/m7/figures/eda_return_correlation_heatmap.png",
+    "outputs_m7_public/m7/figures/eda_spread_distribution.png",
+    "outputs_m7_public/m7/figures/eda_rolling_correlation.png",
+    "outputs_m7_public/m7/figures/eda_rolling_half_life.png",
+    "outputs_m7_public/m7/figures/eda_feature_distributions.png"
+  ],
+  "m7_visuals": [
+    "outputs_m7_public/m7/figures/walk_forward_pnl.png",
+    "outputs_m7_public/m7/figures/walk_forward_cointegration_diagnostics.png",
+    "outputs_m7_public/m7/figures/trading_rule_sensitivity.png",
+    "outputs_m7_public/m7/figures/subperiod_stability.png"
+  ]
+}

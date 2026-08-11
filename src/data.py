@@ -138,9 +138,16 @@ def load_prices(config: dict, require_public: bool = False) -> tuple[pd.DataFram
         cache_path = Path(data_cfg.get("cache_csv", "data/raw/public_prices.csv"))
         try:
             if cache_path.exists():
-                prices = pd.read_csv(cache_path, index_col=0, parse_dates=True).sort_index().dropna()
+                prices = pd.read_csv(cache_path, index_col=0, parse_dates=True).sort_index()
+                missing = [ticker for ticker in tickers if ticker not in prices.columns]
+                if missing:
+                    raise RuntimeError(
+                        f"Cached public dataset does not contain requested tickers: {missing}. "
+                        f"Delete {cache_path} to force a fresh download or provide a matching cache."
+                    )
+                prices = prices[tickers].loc[str(data_cfg["start"]):str(data_cfg["end"])].ffill().dropna()
                 if prices.shape[1] < 2 or len(prices) < 300:
-                    raise RuntimeError("Cached public dataset was too small.")
+                    raise RuntimeError("Cached public dataset was too small after ticker/date validation.")
                 source = f"cached_public_adjusted_close:{cache_path}"
             else:
                 prices = _download_public_prices(tickers, str(data_cfg["start"]), str(data_cfg["end"]))

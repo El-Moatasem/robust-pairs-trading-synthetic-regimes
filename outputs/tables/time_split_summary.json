@@ -10,13 +10,13 @@
   "test_end": "2024-11-22",
   "purge_horizon_days": 10,
   "embargo_days": 2,
-  "labeled_signals_total": 440,
-  "train_signals": 185,
-  "validation_signals": 94,
+  "labeled_signals_total": 421,
+  "train_signals": 166,
+  "validation_signals": 93,
   "test_signals": 156,
-  "train_prevalence": 0.5675675675675675,
-  "validation_prevalence": 0.48936170212765956,
-  "test_prevalence": 0.38461538461538464,
+  "train_prevalence": 0.6385542168674698,
+  "validation_prevalence": 0.5161290322580645,
+  "test_prevalence": 0.3141025641025641,
   "model_selection_basis": "highest f1 on validation only",
-  "selected_model": "random_forest"
+  "selected_model": "gradient_boosting"
 }
