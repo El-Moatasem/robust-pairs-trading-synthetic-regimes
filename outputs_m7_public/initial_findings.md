@@ -19,7 +19,7 @@ These outputs are research-development results. They do not constitute investmen
 - Test positive-class prevalence: 0.283.
 
 ## Out-of-sample trading
-- Best reported test-period strategy by Sharpe: Baseline z-score with Sharpe -0.619.
+- Best reported test-period strategy by Sharpe: ML-filtered (gradient_boosting) with Sharpe -0.279.
 - Classifier quality and trading profitability are reported separately; predictive metrics do not imply profitable execution.
 
 ## Synthetic robustness

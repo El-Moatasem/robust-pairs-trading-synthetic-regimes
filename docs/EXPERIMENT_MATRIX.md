@@ -13,3 +13,12 @@
 ## Interpretation rule
 
 A pair is called **statistically validated in a given experiment** only when it passes the correlation, I(1), Engle-Granger, residual ADF, and BH-FDR gates defined for that experiment's pre-specified hypothesis family. Positive out-of-sample PnL alone is not sufficient.
+
+## Advanced extension matrix
+
+| Experiment | Data | LSTM | TCN | Regime MoE | Uncertainty consensus | Executed in final build |
+|---|---|---:|---:|---:|---:|---|
+| Fixed synthetic | Deterministic synthetic | Yes | Yes | N/A | N/A | Yes |
+| Fixed public | Genuine cached adjusted-close | Yes | Yes | N/A | N/A | Yes |
+| Five-pair public walk-forward | Genuine cached adjusted-close | Yes | Yes | Yes | Yes | Yes |
+| ETF walk-forward | Strict public ETF data | Yes | Yes | Yes | Yes | Code-ready; numeric run pending verified ETF cache/network |

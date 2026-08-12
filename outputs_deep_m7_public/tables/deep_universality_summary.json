@@ -1,0 +1,34 @@
+{
+  "criterion": "A universal ML/DL solution must be selected using validation information only, produce positive out-of-sample PnL and Sharpe in every walk-forward fold, and never underperform the classical baseline in cumulative PnL.",
+  "folds_evaluated": 3,
+  "universal_solution_found": false,
+  "positive_pnl_folds": 1,
+  "positive_sharpe_folds": 1,
+  "noninferior_to_baseline_folds": 2,
+  "selected_models": [
+    {
+      "fold": 1,
+      "pair": "CVX-XOM",
+      "model": "gradient_boosting",
+      "validation_f1": 0.6046511627906976,
+      "pnl": -0.0008354671134277701,
+      "sharpe": -0.010441767112896535
+    },
+    {
+      "fold": 2,
+      "pair": "CVX-XOM",
+      "model": "gru",
+      "validation_f1": 0.5714285714285714,
+      "pnl": 0.10072395907143523,
+      "sharpe": 0.9013905839658117
+    },
+    {
+      "fold": 3,
+      "pair": "KO-PEP",
+      "model": "gru",
+      "validation_f1": 0.4383561643835616,
+      "pnl": -0.06381315725419291,
+      "sharpe": -0.7163212692653647
+    }
+  ]
+}

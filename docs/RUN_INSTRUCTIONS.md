@@ -54,6 +54,24 @@ outputs_m7_public/m7/tables/subperiod_stability.csv
 outputs_m7_public/m7/figures/
 ```
 
+## Deep-learning extension
+
+```bash
+python scripts/run_deep_learning_analysis.py --config config/config.yaml --output-dir outputs_deep_synthetic
+python scripts/run_deep_learning_analysis.py --config config/config_public.yaml --require-public-data --output-dir outputs_deep_public
+python scripts/run_deep_learning_analysis.py --config config/config_m7_public.yaml --require-public-data --walk-forward --output-dir outputs_deep_m7_public
+python scripts/summarize_deep_results.py --outputs outputs_deep_m7_public
+```
+
+Key tables:
+
+```text
+outputs_deep_m7_public/tables/deep_validation_selected_walk_forward.csv
+outputs_deep_m7_public/tables/deep_passed_and_profitable.csv
+outputs_deep_m7_public/tables/strict_statistical_gate_model_summary.csv
+outputs_deep_m7_public/tables/deep_universality_summary.json
+```
+
 ## Exhaustive all-45 public-pair walk-forward
 
 ```bash
@@ -86,7 +104,7 @@ python -m pytest -q
 Expected:
 
 ```text
-9 passed
+13 passed
 ```
 
 ## Smoke test
@@ -99,4 +117,44 @@ Expected final line:
 
 ```text
 Smoke test passed.
+```
+
+## Advanced LSTM / TCN / regime / uncertainty experiments
+
+Synthetic fixed split:
+
+```bash
+python scripts/run_advanced_learning_analysis.py \
+  --config config/config.yaml \
+  --output-dir outputs_advanced_synthetic
+```
+
+Genuine public fixed split:
+
+```bash
+python scripts/run_advanced_learning_analysis.py \
+  --config config/config_public.yaml \
+  --require-public-data \
+  --output-dir outputs_advanced_public
+```
+
+Genuine public five-pair walk-forward:
+
+```bash
+python scripts/run_advanced_learning_analysis.py \
+  --config config/config_m7_public.yaml \
+  --require-public-data \
+  --walk-forward \
+  --output-dir outputs_advanced_m7_public
+python scripts/summarize_advanced_results.py --outputs outputs_advanced_m7_public
+```
+
+Strict ETF advanced replication (requires verified real ETF data):
+
+```bash
+python scripts/run_advanced_learning_analysis.py \
+  --config config/config_m7_etf.yaml \
+  --require-public-data \
+  --walk-forward \
+  --output-dir outputs_advanced_m7_etf
 ```

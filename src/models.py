@@ -9,6 +9,7 @@ from sklearn.base import clone
 from sklearn.dummy import DummyClassifier
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import (
     accuracy_score,
     balanced_accuracy_score,
@@ -65,6 +66,27 @@ def _catalog(random_state: int) -> dict[str, Any]:
             max_depth=3,
             min_samples_leaf=8,
             random_state=random_state,
+        ),
+        "deep_mlp": Pipeline(
+            [
+                ("scaler", StandardScaler()),
+                (
+                    "classifier",
+                    MLPClassifier(
+                        hidden_layer_sizes=(32, 16, 8),
+                        activation="relu",
+                        solver="adam",
+                        alpha=1e-3,
+                        batch_size=16,
+                        learning_rate_init=1e-3,
+                        max_iter=500,
+                        early_stopping=True,
+                        validation_fraction=0.2,
+                        n_iter_no_change=25,
+                        random_state=random_state,
+                    ),
+                ),
+            ]
         ),
     }
 
@@ -138,6 +160,9 @@ def _bootstrap_auc_ci(y: pd.Series, probability: np.ndarray, samples: int, seed:
 def _feature_importance(name: str, model: Any) -> pd.DataFrame:
     if name == "logistic_regression" and hasattr(model, "named_steps"):
         values = np.abs(model.named_steps["classifier"].coef_[0])
+    elif name == "deep_mlp" and hasattr(model, "named_steps"):
+        classifier = model.named_steps["classifier"]
+        values = np.abs(classifier.coefs_[0]).sum(axis=1) if hasattr(classifier, "coefs_") else np.zeros(len(MODEL_FEATURE_COLUMNS))
     elif hasattr(model, "feature_importances_"):
         values = np.asarray(model.feature_importances_)
     else:

@@ -1,0 +1,10 @@
+fold,pair,regime,chosen_expert,validation_f1,validation_precision,validation_n,fallback
+1,CVX-XOM,stable,deep_mlp,0.4827586206896552,0.3333333333333333,26,
+1,CVX-XOM,slow_mean_reversion,lstm,0.8571428571428571,0.75,46,
+1,CVX-XOM,stress_or_breakdown,tcn,0.0,0.0,7,
+2,CVX-XOM,stable,random_forest,1.0,1.0,5,
+2,CVX-XOM,slow_mean_reversion,tcn,0.6666666666666666,1.0,14,
+2,CVX-XOM,stress_or_breakdown,tcn,0.7,0.875,48,
+3,KO-PEP,stable,lstm,0.2727272727272727,0.15789473684210525,24,
+3,KO-PEP,slow_mean_reversion,tcn,0.5454545454545454,0.375,16,
+3,KO-PEP,stress_or_breakdown,tcn,0.72,0.6428571428571429,38,

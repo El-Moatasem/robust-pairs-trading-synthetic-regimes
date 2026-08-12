@@ -1,68 +1,99 @@
-# Final M7 Results and Significance
+# Final M7 + ML/DL Results and Significance
 
-## Fixed synthetic experiment
+## 1. Deterministic synthetic experiment
 
-- Deterministic synthetic data; no historical-price claim.
-- CVX-XOM passes the conservative pair screen.
-- Gradient boosting is selected by validation F1 in the final deterministic run.
-- Test-period ML variants do not establish a robust advantage over the baseline, and regime tests show that ML does not consistently outperform across calm, high-volatility, jump, weak-mean-reversion and stress scenarios.
+- Data are deterministic synthetic prices, not historical investment evidence.
+- CVX-XOM passes the configured statistical screen.
+- In the original ML benchmark, gradient boosting is selected by validation F1 and remains negative on the untouched synthetic test set.
+- In the ML/DL extension, the GRU has the strongest validation F1 but reproduces the negative baseline PnL (about -0.0210) and Sharpe (about -0.154).
+- No tested ML/DL model is both statistically passed and profitable on this synthetic fixed split.
+- Synthetic regime tests do not show a universal ML advantage.
 
-## Full 10-asset public fixed split
+## 2. Full 10-asset genuine public fixed split
 
-- Data source: included Yahoo Finance adjusted-close cache, 2018-01-02 through 2026-06-29.
-- CVX-XOM is provisionally selected.
-- It does not pass the full-sample Engle-Granger/FDR discovery screen.
-- Validation-selected random forest: test AUC about 0.553; cumulative net PnL about 0.0869 vs -0.0230 baseline; Sharpe about 0.348 vs -0.084 baseline.
-- PnL and Sharpe confidence intervals include zero, so the fixed-split improvement is economically interesting but statistically inconclusive.
+- Data source: included genuine adjusted-close public cache, 2018-01-02 through 2026-06-29; strict verifier reports `Synthetic data: False`.
+- CVX-XOM is provisionally selected and fails the full fixed-split Engle-Granger/FDR screen.
+- Random forest is validation-selected and produces test PnL about 0.0869 / Sharpe about 0.348 versus baseline PnL about -0.0230 / Sharpe about -0.084.
+- Deep MLP also has positive PnL about 0.0704; GRU PnL is about 0.0058.
+- These positive model paths are not labeled statistically validated because the pair is provisional.
 
-## M7 five-pair walk-forward analysis
+## 3. Five-pair genuine public walk-forward: classical ML benchmark
+
+The hypothesis family is fixed before test-period outcomes: CVX-XOM, KO-PEP, BAC-JPM, AAPL-MSFT, and QQQ-SPY (canonical orientation may reorder ticker names).
 
 ### Fold 1
-
-- Selected pair: CVX-XOM, passed all configured discovery screens.
-- EG p = 0.00427, residual ADF p = 0.0000395, BH-FDR p = 0.02133, half-life = 12.44 days.
-- Baseline PnL = -0.1802; selected-ML PnL = -0.0803.
-- ML materially reduces the loss, but the fold is not profitable.
+- CVX-XOM passes all configured screens.
+- EG p = 0.00427; residual ADF p = 0.0000395; BH-FDR p = 0.02133; half-life = 12.44 days.
+- Baseline PnL = -0.18021.
+- Gradient boosting is selected by validation F1 in the final three-model ML benchmark and reduces OOS PnL loss to -0.000835 / Sharpe -0.01044.
 
 ### Fold 2
-
-- Selected pair: CVX-XOM, passed all configured discovery screens at the exploratory 10% level.
-- EG p = 0.01063, residual ADF p = 0.000118, BH-FDR p = 0.05315, half-life = 16.97 days.
+- CVX-XOM again passes all configured 10% screens.
+- EG p = 0.01063; residual ADF p = 0.000118; BH-FDR p = 0.05315; half-life = 16.97 days.
 - Test period: 2023-01-06 to 2024-01-04.
-- Baseline and selected-ML net PnL = 0.10072; Sharpe = 0.90139; 12 trades; 58.33% trade win rate.
-- This is the only walk-forward fold in the reported discovery universe that both passes all configured screens and is profitable. The ML filter does not add incremental PnL in this fold because it accepts the same trades as the baseline.
+- Random forest is selected by validation F1 in the ML-only benchmark.
+- Baseline and selected-ML PnL = 0.100724; Sharpe = 0.901391; 12 trades; 58.33% trade win rate.
+- This is the validation-selected ML benchmark's only pair/fold that both passes all configured screens and is profitable.
 
 ### Fold 3
+- KO-PEP is provisional; no candidate passes every configured screen.
+- Logistic regression is selected in the ML-only benchmark; PnL = -0.061162, same as the baseline.
 
-- Selected pair: KO-PEP, provisional; no pair passes every configured discovery screen.
-- Baseline and selected-ML PnL = -0.0612.
+## 4. Deep-learning extension on the five-pair walk-forward study
 
-## Independent backtest
+The final extension evaluates logistic regression, random forest, gradient boosting, a fixed three-hidden-layer deep MLP, and a 20-day sequence-aware PyTorch GRU under the same pair screen, costs, and leakage controls.
 
-The independent trade-replay engine exactly reproduces the primary fixed-split M7 backtest within floating-point precision:
+### All statistically passed + profitable model/pair cases
 
-- baseline: 35 trades in both engines; absolute PnL difference approximately 5.6e-17;
-- selected logistic model: 32 trades in both engines; absolute PnL difference approximately 2.8e-17.
+- Fold 1, CVX-XOM, random forest: PnL 0.047781 / Sharpe 0.734049.
+- Fold 1, CVX-XOM, deep MLP: PnL 0.010307 / Sharpe 0.136817.
+- Fold 2, CVX-XOM, logistic regression: PnL 0.100724 / Sharpe 0.901391.
+- Fold 2, CVX-XOM, random forest: PnL 0.100724 / Sharpe 0.901391.
+- Fold 2, CVX-XOM, gradient boosting: PnL 0.102858 / Sharpe 0.940556.
+- Fold 2, CVX-XOM, deep MLP: PnL 0.100724 / Sharpe 0.901391.
+- Fold 2, CVX-XOM, GRU: PnL 0.100724 / Sharpe 0.901391.
 
-## Trading-rule and subperiod sensitivity
+The unique real pair represented in all passed-and-profitable cases is therefore **CVX-XOM**, in folds 1 and/or 2 depending on the model.
 
-The M7 constrained fixed-split sensitivity does not reveal a robust positive strategy. Some settings reduce the loss relative to baseline, but the selected-ML PnL remains negative. Within the fixed public test period, only the final chronological subperiod is positive, while the first two are negative. This supports a regime-dependent rather than universal-profit interpretation.
+### Validation-selected ML/DL system
 
-## Overall conclusion
+Model choice uses validation F1 only:
 
-The final evidence supports the software/research framework more strongly than it supports a universal trading edge. CVX-XOM provides one statistically screened and profitable walk-forward period, but profitability is not stable across folds and the profit in that successful fold is not created by incremental ML filtering. ML appears more credible as a signal-quality and risk-control layer than as a guaranteed alpha generator.
+1. Fold 1: gradient boosting, PnL -0.000835 / Sharpe -0.010442.
+2. Fold 2: GRU, PnL 0.100724 / Sharpe 0.901391.
+3. Fold 3: GRU, PnL -0.063813 / Sharpe -0.716321.
 
+Under the pre-declared criterion (positive PnL and Sharpe in every fold, never below baseline, validation-only model selection), **no universal ML/DL solution is demonstrated**.
 
-## Exhaustive 45-pair real-data walk-forward screen
+## 5. Strict statistical-gate fixed-model policy
 
-The original 10-ticker real-data universe contains 45 unordered pairs. The final package additionally screens all 45 pairs in each of three walk-forward folds, for 135 pair-fold hypotheses. BH-FDR is applied across the full 45-pair hypothesis family inside each fold. **No pair passes every configured screen after this global correction.**
+A second policy stays flat whenever no pair passes every configured screen. This prevents trading the provisional fold-3 pair.
 
-The exploratory raw-diagnostic backtest table contains 10 cases that pass correlation, Engle-Granger, residual ADF, and I(1) diagnostics before the global FDR gate. Six have positive selected-ML OOS PnL; examples include CVX-SPY (Fold 1, PnL 0.2974, Sharpe 1.0188) and CVX-XOM (Fold 2, PnL 0.1007, Sharpe 0.9014). These are not called statistically validated profitable pairs because their 45-pair BH-FDR p-values exceed 0.10.
+- Fixed random forest: aggregate observed gated PnL 0.148505; positive in both valid-pair folds; no trade in fold 3; zero negative observed folds.
+- Fixed deep MLP: aggregate observed gated PnL 0.111031; positive in both valid-pair folds; no trade in fold 3; zero negative observed folds.
 
-This comparison is central to the final interpretation: the five-pair economically restricted study and the 45-pair broad discovery study answer different hypothesis-testing questions, and the report preserves that distinction instead of choosing the scope after observing test profitability.
+This is the strongest stability result in the current study. It is a promising candidate architecture, not proof of universal future profitability, because only two folds contain a statistically valid pair and external ETF replication remains pending.
 
-## Economically pre-specified ETF replication
+## 6. Exhaustive 45-pair genuine public walk-forward screen
 
-The final source includes a strict public-data replication across eight economically motivated ETF pair hypotheses: SPY-IVV, SPY-VOO, IVV-VOO, QQQ-QQQM, GLD-IAU, IWM-VTWO, VTI-ITOT, and AGG-BND. The experiment reuses the same leakage controls, pair diagnostics, FDR, model-selection procedure, costs, walk-forward analysis, independent backtest, EDA, and sensitivity framework.
+- 45 unordered pairs x 3 folds = 135 pair-fold hypotheses.
+- BH-FDR is applied across all 45 hypotheses within each fold.
+- Zero pair/fold cases pass every configured screen after this global correction.
+- Some raw-diagnostic cases have positive OOS PnL (for example CVX-SPY fold 1 and CVX-XOM fold 2), but they are not called statistically validated because they fail the 45-pair FDR gate.
 
-No ETF numerical result is asserted in this packaged report because `data/raw/etf_prices.csv` was not available in the artifact-build environment and outbound market-data access was unavailable. Strict mode fails rather than substituting synthetic data. Run the documented ETF commands in a network-enabled environment and include numerical claims only after verification reports `Synthetic data: False`.
+## 7. Independent backtest and sensitivity
+
+- The independent trade-replay engine reproduces the primary fixed-split M7 trade counts and PnL to numerical precision.
+- Trading-rule, cost, significance, and subperiod sensitivity show strong regime dependence and do not justify post-hoc parameter selection.
+
+## 8. Economically pre-specified ETF replication
+
+The final source includes a strict real-data replication for SPY-IVV, SPY-VOO, IVV-VOO, QQQ-QQQM, GLD-IAU, IWM-VTWO, VTI-ITOT, and AGG-BND, including ML/DL walk-forward code. No ETF numerical result is asserted in the packaged report because a verified ETF cache was not available in the artifact-build environment. Strict mode fails rather than substituting synthetic data.
+
+## Final conclusion
+
+The project demonstrates genuine historically profitable, statistically passed CVX-XOM cases, and the deep-learning extension adds further profitable model-filtered cases. It does **not** demonstrate a universal validation-selected ML/DL alpha engine. The strongest current research design is a strict statistical gate plus a fixed nonlinear filter: trade statistically valid opportunities and remain flat when the screen fails, while requiring additional external and longer-horizon validation before production deployment.
+
+## Advanced ML/DL result update
+
+The final advanced extension is documented in `docs/ADVANCED_LEARNING_RESULTS.md`. The key result is that additional model complexity does not produce a universal solution. The fold-2 regime-aware mixture-of-experts achieves PnL `0.163822` and Sharpe `1.589911`, but loses in fold 1. The strict statistical-gate fixed random forest and deep MLP remain the only tested fixed policies that are positive in both statistically valid CVX-XOM folds and flat in the rejected third fold.

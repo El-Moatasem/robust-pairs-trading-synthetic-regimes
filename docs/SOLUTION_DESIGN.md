@@ -21,3 +21,6 @@ Classical pairs trading can confuse a large spread deviation with a genuine mean
 
 ## Deployment decision
 Use the package as a research/risk-control framework, not an automatic trade recommendation. Production deployment would require intraday execution data, borrow/financing constraints, market impact, monitoring, and portfolio-level risk controls.
+
+### Advanced decision layer
+After the statistical pair gate, the final package can compare a fixed RF/MLP/GRU/LSTM/TCN expert set. A formation-window regime classifier can route a signal to a validation-selected expert, while an uncertainty-consensus policy can abstain when too few experts agree. Neither policy is allowed to weaken the statistical pair screen, and neither uses test PnL for tuning.

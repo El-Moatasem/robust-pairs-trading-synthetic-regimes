@@ -155,3 +155,14 @@ m7:
   - 20
   - 40
   subperiods: 3
+deep_learning:
+  sequence_length: 20
+  hidden_size: 16
+  num_layers: 1
+  dropout: 0.1
+  epochs: 80
+  patience: 12
+  batch_size: 16
+  learning_rate: 0.003
+  weight_decay: 0.001
+  min_samples_per_split: 10
