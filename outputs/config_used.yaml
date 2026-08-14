@@ -129,3 +129,20 @@ deep_learning:
   learning_rate: 0.003
   weight_decay: 0.001
   min_samples_per_split: 10
+advanced_learning:
+  lstm_hidden_size: 16
+  tcn_channels: 16
+  tcn_kernel_size: 3
+  tcn_dropout: 0.1
+  regime_quantile: 0.75
+  min_regime_validation_samples: 5
+  consensus_vote_grid:
+  - 3
+  - 4
+  - 5
+  expert_models:
+  - random_forest
+  - deep_mlp
+  - gru
+  - lstm
+  - tcn
