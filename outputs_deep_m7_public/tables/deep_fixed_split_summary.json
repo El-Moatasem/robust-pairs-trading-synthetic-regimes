@@ -1,0 +1,10 @@
+{
+  "pair": "KO-PEP",
+  "pair_status": "provisional",
+  "pair_passes_all": false,
+  "baseline_pnl": -0.1854182398903042,
+  "baseline_sharpe": -0.6186733882445601,
+  "validation_selected_model": "gru",
+  "selected_model_pnl": -0.1992416800215909,
+  "selected_model_sharpe": -0.6686851724615295
+}

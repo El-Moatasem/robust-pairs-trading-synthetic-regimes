@@ -3,56 +3,133 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from .pairs import build_spread, estimate_hedge_ratio
+from .pairs import build_spread
+
+
+MODEL_FEATURE_COLUMNS = [
+    "signal_zscore",
+    "abs_zscore",
+    "spread_change_lagged",
+    "spread_volatility",
+    "rolling_corr",
+    "spread_drawdown",
+    "half_life",
+    "deviation_persistence",
+    "regime_stress_proxy",
+]
 
 
 def rolling_zscore(series: pd.Series, window: int) -> pd.Series:
-    mu = series.rolling(window).mean()
-    sigma = series.rolling(window).std(ddof=0)
-    return (series - mu) / sigma.replace(0, np.nan)
+    mean = series.rolling(window=window, min_periods=window).mean()
+    std = series.rolling(window=window, min_periods=window).std(ddof=0).replace(0.0, np.nan)
+    return (series - mean) / std
 
 
-def estimate_half_life(spread: pd.Series, lag: int = 1) -> pd.Series:
-    # rolling approximation: regress delta spread on lagged spread, convert AR coefficient into half-life proxy.
-    s = spread.dropna()
-    out = pd.Series(index=spread.index, dtype=float)
-    window = 60
-    for i in range(window, len(s)):
-        sample = s.iloc[i-window:i]
-        y = sample.diff().dropna()
-        x = sample.shift(lag).dropna().loc[y.index]
-        if len(x) < 20 or np.var(x) == 0:
-            continue
-        beta = np.cov(y, x)[0, 1] / np.var(x)
-        if beta >= 0:
-            hl = np.nan
+def _rolling_half_life(spread: pd.Series, window: int) -> pd.Series:
+    """Estimate the rolling mean-reversion half-life without repeated OLS fits.
+
+    For each trailing spread window we estimate the slope in
+    ``Delta s_t = a + b s_(t-1) + u_t``.  With an intercept, the OLS slope is
+    simply Cov(s_(t-1), Delta s_t) / Var(s_(t-1)), so rolling covariance and
+    variance give the same slope much faster than fitting one statsmodels model
+    per timestamp.  A negative slope implies mean reversion and yields
+    ``half_life = -ln(2) / b``.
+    """
+    pair_window = max(2, int(window) - 1)
+    min_periods = max(39, int(window) // 2 - 1)
+    lagged = spread.shift(1)
+    delta = spread.diff()
+    covariance = lagged.rolling(pair_window, min_periods=min_periods).cov(delta)
+    variance = lagged.rolling(pair_window, min_periods=min_periods).var()
+    beta = covariance / variance.replace(0.0, np.nan)
+    half_life = (-np.log(2.0) / beta).where(beta < -1e-8)
+    return half_life.clip(upper=252.0).ffill()
+
+
+def _consecutive_deviation_count(abs_zscore: pd.Series, threshold: float) -> pd.Series:
+    values = abs_zscore.fillna(0.0).to_numpy()
+    counts = np.zeros(len(values), dtype=float)
+    current = 0
+    for i, value in enumerate(values):
+        if value >= threshold:
+            current += 1
         else:
-            hl = -np.log(2) / beta
-        out.loc[s.index[i]] = hl
-    return out.ffill()
+            current = 0
+        counts[i] = current
+    return pd.Series(counts, index=abs_zscore.index, dtype=float)
 
 
-def build_feature_frame(prices: pd.DataFrame, asset_a: str, asset_b: str, cfg: dict, hedge_ratio: float | None = None) -> pd.DataFrame:
+def _rolling_percentile_last(series: pd.Series, window: int) -> pd.Series:
+    def percentile(values: np.ndarray) -> float:
+        if len(values) == 0 or not np.isfinite(values[-1]):
+            return np.nan
+        finite = values[np.isfinite(values)]
+        if len(finite) < 10:
+            return np.nan
+        return float((finite <= values[-1]).mean())
+
+    return series.rolling(window=window, min_periods=max(20, window // 4)).apply(percentile, raw=True)
+
+
+def build_feature_frame(
+    prices: pd.DataFrame,
+    asset_a: str,
+    asset_b: str,
+    cfg: dict,
+    alpha: float,
+    hedge_ratio: float,
+) -> pd.DataFrame:
+    """Build a no-look-ahead feature frame using a fixed training-period hedge ratio.
+
+    The raw spread is retained for realized PnL. Every predictor used by the ML model and trading
+    signal is shifted by `lag_predictors_by_days`, so a decision timestamp never uses the same-day
+    close that generates its subsequent PnL.
+    """
     fcfg = cfg["features"]
-    pair = prices[[asset_a, asset_b]].dropna()
-    if hedge_ratio is None:
-        hedge_ratio = estimate_hedge_ratio(pair[asset_a], pair[asset_b])
-    spread = build_spread(pair[asset_a], pair[asset_b], hedge_ratio)
-    returns_a = pair[asset_a].pct_change()
-    returns_b = pair[asset_b].pct_change()
-    features = pd.DataFrame(index=pair.index)
-    features["asset_a"] = pair[asset_a]
-    features["asset_b"] = pair[asset_b]
-    features["hedge_ratio"] = hedge_ratio
-    features["spread"] = spread
-    features["zscore"] = rolling_zscore(spread, fcfg["lookback_zscore"])
-    features["spread_change"] = spread.diff()
-    features["spread_volatility"] = spread.diff().rolling(fcfg["lookback_volatility"]).std()
-    features["rolling_corr"] = returns_a.rolling(fcfg["lookback_correlation"]).corr(returns_b)
-    cumulative = spread - spread.rolling(fcfg["lookback_drawdown"]).max()
-    features["spread_drawdown"] = cumulative
-    features["half_life"] = estimate_half_life(spread, fcfg.get("half_life_lag", 1))
-    features["abs_zscore"] = features["zscore"].abs()
-    features["deviation_persistence"] = (features["abs_zscore"] > 1.0).rolling(10).mean()
-    features["regime_stress_proxy"] = features["spread_volatility"].rank(pct=True) * (1 - features["rolling_corr"].rank(pct=True))
-    return features.dropna()
+    pair = prices[[asset_a, asset_b]].dropna().copy()
+    spread = build_spread(pair[asset_a], pair[asset_b], alpha=alpha, hedge_ratio=hedge_ratio)
+    returns_a = np.log(pair[asset_a]).diff()
+    returns_b = np.log(pair[asset_b]).diff()
+
+    raw_zscore = rolling_zscore(spread, int(fcfg["lookback_zscore"]))
+    raw_spread_change = spread.diff()
+    raw_volatility = raw_spread_change.rolling(
+        int(fcfg["lookback_volatility"]), min_periods=int(fcfg["lookback_volatility"])
+    ).std(ddof=0)
+    raw_corr = returns_a.rolling(
+        int(fcfg["lookback_correlation"]), min_periods=int(fcfg["lookback_correlation"])
+    ).corr(returns_b)
+    rolling_peak = spread.rolling(
+        int(fcfg["lookback_drawdown"]), min_periods=int(fcfg["lookback_drawdown"])
+    ).max()
+    raw_drawdown = spread - rolling_peak
+    raw_half_life = _rolling_half_life(spread, int(fcfg.get("half_life_window", 120)))
+    raw_persistence = _consecutive_deviation_count(
+        raw_zscore.abs(), float(fcfg.get("persistence_threshold_z", 1.0))
+    )
+
+    stress_window = int(fcfg.get("stress_window", 252))
+    volatility_pct = _rolling_percentile_last(raw_volatility, stress_window)
+    weakening_corr_pct = _rolling_percentile_last(-raw_corr, stress_window)
+    raw_stress = 0.5 * volatility_pct + 0.5 * weakening_corr_pct
+
+    lag = int(fcfg.get("lag_predictors_by_days", 1))
+    frame = pd.DataFrame(index=pair.index)
+    frame["asset_a_price"] = pair[asset_a]
+    frame["asset_b_price"] = pair[asset_b]
+    frame["alpha"] = alpha
+    frame["hedge_ratio"] = hedge_ratio
+    frame["spread"] = spread
+    frame["contemporaneous_zscore_for_outcomes"] = raw_zscore
+    frame["signal_zscore"] = raw_zscore.shift(lag)
+    frame["abs_zscore"] = raw_zscore.abs().shift(lag)
+    frame["spread_change_lagged"] = raw_spread_change.shift(lag)
+    frame["spread_volatility"] = raw_volatility.shift(lag)
+    frame["rolling_corr"] = raw_corr.shift(lag)
+    frame["spread_drawdown"] = raw_drawdown.shift(lag)
+    frame["half_life"] = raw_half_life.shift(lag)
+    frame["deviation_persistence"] = raw_persistence.shift(lag)
+    frame["regime_stress_proxy"] = raw_stress.shift(lag)
+    frame["asset_a"] = asset_a
+    frame["asset_b"] = asset_b
+    return frame.replace([np.inf, -np.inf], np.nan).dropna(subset=MODEL_FEATURE_COLUMNS + ["spread"])

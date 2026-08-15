@@ -1,0 +1,9 @@
+{
+  "spread_mean": 0.0002596335283084746,
+  "spread_phi": 0.94456303461966,
+  "innovation_std": 0.004740796099457643,
+  "jump_probability": 0.010443864229765013,
+  "jump_std": 0.011066065533263282,
+  "common_return_mean": -9.46524976057622e-06,
+  "common_return_std": 0.008545068168739959
+}

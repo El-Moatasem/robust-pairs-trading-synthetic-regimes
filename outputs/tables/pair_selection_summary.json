@@ -1,0 +1,7 @@
+{
+  "pairs_tested": 45,
+  "pairs_passing_all": 4,
+  "selection_status": "passed_all_conservative_filters",
+  "selected_asset_a": "CVX",
+  "selected_asset_b": "XOM"
+}

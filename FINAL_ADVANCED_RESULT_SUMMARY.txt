@@ -1,0 +1,73 @@
+MScFE 690 Group 16021 - Final Advanced ML/DL Result Summary
+===========================================================
+
+Verified automated checks
+-------------------------
+pytest: 13 passed
+Synthetic verifier: passed; Synthetic data: True
+Public verifier: passed; Synthetic data: False
+M7 public verifier: passed; Synthetic data: False
+Smoke test: passed
+
+Advanced methods added and executed
+-----------------------------------
+1. LSTM sequence classifier (20-day lagged feature sequences).
+2. Causal temporal CNN / TCN with dilated 1-D convolutions.
+3. Training-defined regime mixture-of-experts (MoE), with experts selected by validation F1 only.
+4. Uncertainty-aware consensus / abstention policy, with vote strength selected on validation only.
+
+Synthetic fixed split
+---------------------
+CVX-XOM passes all configured screens.
+- LSTM: PnL -0.042337; Sharpe -0.340869.
+- TCN: PnL +0.034429; Sharpe +0.270723. Passed + profitable synthetic case.
+
+Genuine public fixed split
+--------------------------
+CVX-XOM remains provisional under the full 45-pair family.
+- LSTM: PnL +0.005826; Sharpe +0.021266; not statistically validated.
+- TCN: PnL +0.046507; Sharpe +0.188748; not statistically validated.
+
+Real-data five-pair walk-forward: all passed + profitable advanced cases
+------------------------------------------------------------------------
+Unique statistically valid real pair: CVX-XOM.
+Fold 1:
+- Random forest: +0.047781, Sharpe +0.734049.
+- Deep MLP: +0.010307, Sharpe +0.136817.
+Fold 2:
+- Random forest: +0.100724, Sharpe +0.901391.
+- Deep MLP: +0.100724, Sharpe +0.901391.
+- GRU: +0.100724, Sharpe +0.901391.
+- LSTM: +0.100724, Sharpe +0.901391.
+- TCN: +0.061835, Sharpe +0.816544.
+- Regime mixture-of-experts: +0.163822, Sharpe +1.589911.
+- Uncertainty consensus: +0.100724, Sharpe +0.901391.
+
+Validation-selected advanced policy
+-----------------------------------
+Fold 1: uncertainty consensus; PnL -0.000331; Sharpe -0.006475; pair passes.
+Fold 2: regime mixture-of-experts; PnL +0.163822; Sharpe +1.589911; pair passes.
+Fold 3: regime mixture-of-experts; PnL -0.021133; Sharpe -0.246301; pair fails/provisional.
+Under the strict pair gate, fold 3 is no-trade / flat.
+
+Strict statistical-gate fixed policies
+--------------------------------------
+- Random forest: aggregate gated PnL +0.148505; positive in both valid-pair folds; 0 negative; 1 no-trade.
+- Deep MLP: aggregate gated PnL +0.111031; positive in both valid-pair folds; 0 negative; 1 no-trade.
+- Uncertainty consensus: +0.100393 aggregate, but one valid fold is negative.
+- LSTM: -0.007577 aggregate.
+- Regime MoE: -0.034883 aggregate.
+- GRU: -0.079485 aggregate.
+- TCN: -0.118373 aggregate.
+
+Universal solution
+------------------
+Strict universal validation-selected ML/DL solution demonstrated: NO.
+Newer sequence/regime methods improve some windows but not every statistically valid fold.
+The strongest observed cross-fold candidate remains:
+  statistical pair gate -> fixed random forest or fixed deep MLP -> trade only validated signals -> otherwise remain flat.
+This is observed historical robustness, not a universal future-profit guarantee.
+
+ETF external replication
+------------------------
+The ETF experiment is fully code-ready for the advanced methods, but no ETF numerical result is fabricated because a verified ETF cache/network was unavailable in the build environment.

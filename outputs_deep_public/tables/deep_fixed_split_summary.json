@@ -1,0 +1,10 @@
+{
+  "pair": "CVX-XOM",
+  "pair_status": "provisional",
+  "pair_passes_all": false,
+  "baseline_pnl": -0.023034692447774067,
+  "baseline_sharpe": -0.08355319947033922,
+  "validation_selected_model": "random_forest",
+  "selected_model_pnl": 0.0869221672764874,
+  "selected_model_sharpe": 0.34829359490252676
+}

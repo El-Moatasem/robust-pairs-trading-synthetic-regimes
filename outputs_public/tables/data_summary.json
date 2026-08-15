@@ -1,0 +1,11 @@
+{
+  "source": "cached_public_adjusted_close:data/raw/public_prices.csv",
+  "mode_requested": "public",
+  "is_synthetic": false,
+  "fallback_reason": null,
+  "frequency": "daily",
+  "n_assets": 10,
+  "n_observations": 2133,
+  "start": "2018-01-02",
+  "end": "2026-06-29"
+}

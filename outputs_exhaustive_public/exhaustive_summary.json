@@ -1,0 +1,47 @@
+{
+  "data_source": "cached_public_adjusted_close:data/raw/public_prices.csv",
+  "synthetic": false,
+  "tickers": [
+    "KO",
+    "PEP",
+    "XOM",
+    "CVX",
+    "JPM",
+    "BAC",
+    "MSFT",
+    "AAPL",
+    "SPY",
+    "QQQ"
+  ],
+  "pair_universe_size": 45,
+  "walk_forward_folds": 3,
+  "pair_fold_hypotheses": 135,
+  "full_fdr_pass_cases": 0,
+  "raw_diagnostic_backtests": 10,
+  "raw_diagnostic_positive_oos_cases": 6,
+  "folds": [
+    {
+      "fold": 1,
+      "pairs_tested": 45,
+      "pairs_passing_all_45pair_fdr": 0,
+      "minimum_raw_eg_p": 0.004266003419905432,
+      "minimum_bh_fdr_p": 0.19197015389574443
+    },
+    {
+      "fold": 2,
+      "pairs_tested": 45,
+      "pairs_passing_all_45pair_fdr": 0,
+      "minimum_raw_eg_p": 0.010630896909572685,
+      "minimum_bh_fdr_p": 0.4783903609307708
+    },
+    {
+      "fold": 3,
+      "pairs_tested": 45,
+      "pairs_passing_all_45pair_fdr": 0,
+      "minimum_raw_eg_p": 0.05611905940931517,
+      "minimum_bh_fdr_p": 0.9185887271498433
+    }
+  ],
+  "interpretation": "The raw-diagnostic backtests are exploratory. A positive OOS PnL does not constitute a statistically validated pair when the pair fails the BH-FDR gate across the full 45-pair universe.",
+  "backtest_snapshot_note": "The included exploratory raw-diagnostic backtest table is a verified snapshot from the same cached public dataset and code methodology. The full 135-row screening table was recomputed in this package and matched the prior verified screening output exactly. Reproduce slow exploratory backtests with --backtest-raw."
+}

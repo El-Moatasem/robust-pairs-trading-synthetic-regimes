@@ -1,17 +1,13 @@
-# Important Code Sections
+# Important Code Sections for the Report
 
-These are the main code sections to highlight in the project proposal report and future submissions.
-
-| File / module | Purpose |
+| Module | Research control implemented |
 |---|---|
-| `run_pipeline.py` | End-to-end workflow that loads data, screens pairs, builds features, trains models, backtests strategies, generates synthetic regimes, and exports outputs. |
-| `single_file_demo.py` | Minimal self-contained demo that can run without internet access or project imports. |
-| `src/data.py` | Loads public equity/ETF data with an offline synthetic-data fallback. |
-| `src/pairs.py` | Screens candidate pairs using return correlation, Engle-Granger cointegration, ADF tests, and hedge-ratio estimation. |
-| `src/features.py` | Builds spread, z-score, rolling volatility, rolling correlation, drawdown, half-life, persistence, and stress-proxy features. |
-| `src/labels.py` | Creates accept/reject trade labels based on convergence within a horizon after transaction costs and stop-loss constraints. |
-| `src/models.py` | Trains logistic regression, random forest, and optional XGBoost or fallback gradient-boosting trade filters. |
-| `src/backtest.py` | Compares baseline z-score and ML-filtered trading variants with costs, slippage, stops, and max holding period. |
-| `src/synthetic.py` | Generates synthetic spread regimes for calm, high-volatility, jump, weak-mean-reversion, and stress scenarios. |
-| `src/visualization.py` | Generates report-ready figures with titles, axes, and labels. |
-| `outputs/` | Stores preliminary tables, figures, and initial findings used in the report. |
+| `src/data.py` | Explicit synthetic/public modes and a correct shared-trend plus stationary-residual generator. |
+| `src/splits.py` | Purged and embargoed chronological train/validation/test partitions. |
+| `src/pairs.py` | Training-only I(1), correlation, Engle-Granger, residual ADF, FDR, OLS intercept, hedge ratio, and half-life. |
+| `src/features.py` | One-day-lagged predictors, exact persistence measure, trailing stress proxy, and fixed training-period spread definition. |
+| `src/labels.py` | Signal-only labels based on convergence-before-stop and four-leg pair-trading costs. |
+| `src/models.py` | Validation-only threshold and model selection; untouched test metrics and AUC intervals. |
+| `src/backtest.py` | Test-only baseline and filtered strategies, two-leg turnover costs, trade ledger, and block-bootstrap intervals. |
+| `src/synthetic.py` | Training-calibrated OU/AR(1) regimes and scenario-by-scenario economic evaluation. |
+| `tests/test_research_controls.py` | Tests for conservative cointegration, feature leakage, signal labels, and split separation. |

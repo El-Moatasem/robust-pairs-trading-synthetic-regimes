@@ -1,19 +1,20 @@
 from __future__ import annotations
 
 import json
-import os
 import random
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import numpy as np
-import pandas as pd
 import yaml
 
 
-def load_config(path: str | Path) -> Dict[str, Any]:
-    with open(path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+def load_config(path: str | Path) -> dict[str, Any]:
+    with Path(path).open("r", encoding="utf-8") as handle:
+        cfg = yaml.safe_load(handle)
+    if not isinstance(cfg, dict):
+        raise ValueError(f"Configuration at {path} did not contain a YAML mapping.")
+    return cfg
 
 
 def set_seed(seed: int) -> None:
@@ -21,24 +22,33 @@ def set_seed(seed: int) -> None:
     np.random.seed(seed)
 
 
-def ensure_dirs(base: str | Path) -> Dict[str, Path]:
+def ensure_dirs(base: str | Path) -> dict[str, Path]:
     base = Path(base)
-    dirs = {
+    result = {
         "base": base,
         "tables": base / "tables",
         "figures": base / "figures",
         "models": base / "models",
+        "logs": base / "logs",
     }
-    for path in dirs.values():
+    for path in result.values():
         path.mkdir(parents=True, exist_ok=True)
-    return dirs
+    return result
 
 
-def save_json(obj: Dict[str, Any], path: str | Path) -> None:
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(obj, f, indent=2, default=str)
+def save_json(value: Any, path: str | Path) -> None:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(value, handle, indent=2, default=str)
 
 
-def safe_to_csv(df: pd.DataFrame, path: str | Path) -> None:
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(path, index=True if df.index.name else False)
+def as_builtin(value: Any) -> Any:
+    """Convert numpy/pandas scalar values to JSON-safe Python values."""
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, dict):
+        return {str(k): as_builtin(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [as_builtin(v) for v in value]
+    return value
