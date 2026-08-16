@@ -1,0 +1,59 @@
+MScFE 690 Group 16021 - Final ML/DL Result Summary
+==================================================
+
+Verified automated checks
+-------------------------
+pytest: 13 passed
+Synthetic verifier: passed; Synthetic data: True
+Public verifier: passed; Synthetic data: False
+M7 public verifier: passed; Synthetic data: False
+Smoke test: passed
+
+Deep-learning models added
+--------------------------
+1. Deep MLP: fixed 32-16-8 feed-forward network.
+2. GRU: compact PyTorch recurrent model using 20-day sequences of the nine lagged relationship-quality features.
+
+Real-data statistically passed + profitable cases
+--------------------------------------------------
+Unique pair: CVX-XOM.
+
+Fold 1 (CVX-XOM passes all configured five-pair screens):
+- Random forest: PnL 0.047781; Sharpe 0.734049.
+- Deep MLP: PnL 0.010307; Sharpe 0.136817.
+
+Fold 2 (CVX-XOM passes all configured five-pair screens):
+- Logistic regression: PnL 0.100724; Sharpe 0.901391.
+- Random forest: PnL 0.100724; Sharpe 0.901391.
+- Gradient boosting: PnL 0.102858; Sharpe 0.940556.
+- Deep MLP: PnL 0.100724; Sharpe 0.901391.
+- GRU: PnL 0.100724; Sharpe 0.901391.
+
+Validation-selected ML/DL system
+--------------------------------
+Fold 1: gradient boosting; PnL -0.000835; Sharpe -0.010442.
+Fold 2: GRU; PnL 0.100724; Sharpe 0.901391.
+Fold 3: GRU; PnL -0.063813; Sharpe -0.716321; pair is provisional.
+
+Universal ML/DL solution demonstrated: NO.
+Reason: the validation-selected system is not profitable in every fold and fold 3 has no statistically valid pair.
+
+Strict statistical-gate candidate policy
+----------------------------------------
+Policy: stay flat whenever no pair passes every statistical screen.
+- Fixed random forest: aggregate gated PnL 0.148505; 2 positive valid-pair folds; 1 no-trade fold; 0 negative observed folds.
+- Fixed deep MLP: aggregate gated PnL 0.111031; 2 positive valid-pair folds; 1 no-trade fold; 0 negative observed folds.
+
+Interpretation: promising candidate architecture, not proof of universal future profitability.
+
+Exhaustive 45-pair robustness
+-----------------------------
+45 pairs x 3 folds = 135 pair-fold tests.
+No pair survives BH-FDR when correction is applied across all 45 hypotheses in a fold.
+Positive raw-diagnostic cases are exploratory rather than statistically validated under this broader family.
+
+ETF external replication
+------------------------
+The code is ready for strict real-data tests of:
+SPY-IVV, SPY-VOO, IVV-VOO, QQQ-QQQM, GLD-IAU, IWM-VTWO, VTI-ITOT, AGG-BND.
+No ETF numerical result is fabricated because a verified ETF cache was not available in the build environment.

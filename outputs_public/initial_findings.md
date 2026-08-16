@@ -3,7 +3,7 @@
 These outputs are research-development results. They do not constitute investment advice or final evidence of profitability.
 
 ## Data and leakage controls
-- Data source: `yfinance_auto_adjusted_close`.
+- Data source: `cached_public_adjusted_close:data/raw/public_prices.csv`.
 - Synthetic data used: `False`.
 - Pair selection was performed only through 2022-03-11.
 - Purge horizon: 10 days; embargo: 2 days.

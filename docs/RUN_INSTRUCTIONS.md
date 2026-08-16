@@ -1,65 +1,113 @@
-# Detailed Run and Verification Instructions
+# Final Run and Verification Instructions
 
-## 1. Open a terminal in the repository
-
-```bash
-cd robust-pairs-trading-synthetic-regimes_FINAL
-```
-
-## 2. Create an isolated Python environment
-
-### macOS / Linux
+## Environment
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-```
-
-### Windows PowerShell
-
-```powershell
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-```
-
-The shell prompt should show `(.venv)`.
-
-## 3. Install dependencies
-
-```bash
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-Do not install into Homebrew's system-managed Python with `--break-system-packages`.
+Windows PowerShell:
 
-## 4. Run the reproducible offline pipeline
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+## Synthetic analysis
 
 ```bash
 python run_pipeline.py --config config/config.yaml
+python scripts/verify_outputs.py --outputs outputs
 ```
 
-## 5. Run the final public-data analysis
+## Full public-data analysis
 
 ```bash
 python run_pipeline.py --config config/config_public.yaml --require-public-data
+python scripts/verify_outputs.py --outputs outputs_public
 ```
 
-If the computer cannot access Yahoo Finance, place a CSV at `data/raw/public_prices.csv`. The first column must contain dates and the remaining columns must contain adjusted-close series with ticker names as headers.
+The included `data/raw/public_prices.csv` allows the instructor to reproduce the reported public results without relying on a future Yahoo Finance download. Delete that cache only when a fresh download is intentionally desired.
 
-## 6. Run the tests
+## M7/final robustness analysis
+
+```bash
+python run_pipeline.py --config config/config_m7_public.yaml --require-public-data
+python scripts/verify_outputs.py --outputs outputs_m7_public
+python scripts/run_m7_analysis.py --config config/config_m7_public.yaml --require-public-data
+```
+
+Inspect:
+
+```text
+outputs_m7_public/m7/tables/walk_forward_summary.csv
+outputs_m7_public/m7/tables/walk_forward_pair_screens.csv
+outputs_m7_public/m7/tables/passed_and_profitable_walk_forward.csv
+outputs_m7_public/m7/tables/independent_backtest_comparison.csv
+outputs_m7_public/m7/tables/trading_rule_sensitivity.csv
+outputs_m7_public/m7/tables/subperiod_stability.csv
+outputs_m7_public/m7/figures/
+```
+
+## Deep-learning extension
+
+```bash
+python scripts/run_deep_learning_analysis.py --config config/config.yaml --output-dir outputs_deep_synthetic
+python scripts/run_deep_learning_analysis.py --config config/config_public.yaml --require-public-data --output-dir outputs_deep_public
+python scripts/run_deep_learning_analysis.py --config config/config_m7_public.yaml --require-public-data --walk-forward --output-dir outputs_deep_m7_public
+python scripts/summarize_deep_results.py --outputs outputs_deep_m7_public
+```
+
+Key tables:
+
+```text
+outputs_deep_m7_public/tables/deep_validation_selected_walk_forward.csv
+outputs_deep_m7_public/tables/deep_passed_and_profitable.csv
+outputs_deep_m7_public/tables/strict_statistical_gate_model_summary.csv
+outputs_deep_m7_public/tables/deep_universality_summary.json
+```
+
+## Exhaustive all-45 public-pair walk-forward
+
+```bash
+python scripts/run_exhaustive_public_walkforward.py --config config/config_m7_public.yaml --require-public-data
+```
+
+To reproduce the slower exploratory OOS backtests for raw-diagnostic candidates that do not necessarily survive the global 45-pair FDR gate:
+
+```bash
+python scripts/run_exhaustive_public_walkforward.py --config config/config_m7_public.yaml --require-public-data --backtest-raw
+```
+
+## Economically pre-specified related-ETF replication
+
+Requires internet access or a matching `data/raw/etf_prices.csv`:
+
+```bash
+python run_pipeline.py --config config/config_m7_etf.yaml --require-public-data
+python scripts/verify_outputs.py --outputs outputs_m7_etf
+python scripts/run_m7_analysis.py --config config/config_m7_etf.yaml --require-public-data
+python scripts/summarize_etf_results.py --outputs outputs_m7_etf
+```
+
+## Tests
 
 ```bash
 python -m pytest -q
 ```
 
-Expected result:
+Expected:
 
 ```text
-4 passed
+13 passed
 ```
 
-## 7. Run the smoke test
+## Smoke test
 
 ```bash
 python scripts/run_smoke_test.py
@@ -71,42 +119,42 @@ Expected final line:
 Smoke test passed.
 ```
 
-## 8. Verify outputs automatically
+## Advanced LSTM / TCN / regime / uncertainty experiments
+
+Synthetic fixed split:
 
 ```bash
-python scripts/verify_outputs.py --outputs outputs
+python scripts/run_advanced_learning_analysis.py \
+  --config config/config.yaml \
+  --output-dir outputs_advanced_synthetic
 ```
 
-Expected final line:
+Genuine public fixed split:
 
-```text
-Output verification passed.
+```bash
+python scripts/run_advanced_learning_analysis.py \
+  --config config/config_public.yaml \
+  --require-public-data \
+  --output-dir outputs_advanced_public
 ```
 
-## 9. Manual verification checklist
+Genuine public five-pair walk-forward:
 
-Open the following files:
-
-- `outputs/tables/data_summary.json`: confirm whether the run is synthetic or public.
-- `outputs/tables/time_split_summary.json`: confirm train, validation, test, purge, and embargo information.
-- `outputs/tables/candidate_pairs.csv`: confirm the selected pair and diagnostic pass flags.
-- `outputs/tables/model_metrics.csv`: confirm model selection used validation metrics and inspect test metrics separately.
-- `outputs/tables/strategy_metrics_test.csv`: compare the untouched test-period baseline and all ML-filtered variants.
-- `outputs/tables/synthetic_regime_summary.csv`: inspect performance by regime.
-- `outputs/run_summary.json`: confirm the selected pair, model, data source, and important caveat.
-
-## 10. PyCharm
-
-Set the interpreter to:
-
-```text
-<project>/.venv/bin/python
+```bash
+python scripts/run_advanced_learning_analysis.py \
+  --config config/config_m7_public.yaml \
+  --require-public-data \
+  --walk-forward \
+  --output-dir outputs_advanced_m7_public
+python scripts/summarize_advanced_results.py --outputs outputs_advanced_m7_public
 ```
 
-Create a run configuration with:
+Strict ETF advanced replication (requires verified real ETF data):
 
-```text
-Script path: run_pipeline.py
-Parameters: --config config/config.yaml
-Working directory: repository root
+```bash
+python scripts/run_advanced_learning_analysis.py \
+  --config config/config_m7_etf.yaml \
+  --require-public-data \
+  --walk-forward \
+  --output-dir outputs_advanced_m7_etf
 ```

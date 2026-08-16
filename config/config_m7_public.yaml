@@ -1,0 +1,185 @@
+project:
+  name: ML-Enhanced Robust Equity Pairs Trading under Synthetic Market Regimes
+  version: m7-final-public-validation
+  random_seed: 42
+data:
+  mode: public
+  tickers:
+  - KO
+  - PEP
+  - XOM
+  - CVX
+  - JPM
+  - BAC
+  - MSFT
+  - AAPL
+  - SPY
+  - QQQ
+  start: '2018-01-01'
+  end: '2026-06-30'
+  frequency: daily
+  fallback_days: 1800
+  cache_csv: data/raw/public_prices.csv
+split:
+  pair_selection_fraction: 0.5
+  validation_fraction: 0.2
+  test_fraction: 0.3
+  purge_horizon_days: 10
+  embargo_days: 2
+pair_selection:
+  min_abs_corr: 0.45
+  max_eg_pvalue: 0.1
+  max_residual_adf_pvalue: 0.1
+  fdr_alpha: 0.1
+  require_i1: true
+  require_both_cointegration_diagnostics: true
+  allow_best_available: true
+  top_n: 5
+  candidate_pairs:
+  - XOM-CVX
+  - KO-PEP
+  - JPM-BAC
+  - AAPL-MSFT
+  - SPY-QQQ
+features:
+  lookback_zscore: 30
+  lookback_volatility: 20
+  lookback_correlation: 60
+  lookback_drawdown: 60
+  half_life_window: 120
+  persistence_threshold_z: 1.0
+  stress_window: 252
+  lag_predictors_by_days: 1
+labels:
+  horizon_days: 10
+  entry_zscore: 1.5
+  convergence_zscore: 0.25
+  stop_loss_zscore: 3.0
+  transaction_cost_bps_per_leg: 2.0
+  slippage_bps_per_leg: 1.0
+  minimum_net_return: 0.0
+models:
+  random_state: 42
+  algorithms:
+  - logistic_regression
+  - random_forest
+  - gradient_boosting
+  threshold_grid:
+  - 0.3
+  - 0.35
+  - 0.4
+  - 0.45
+  - 0.5
+  - 0.55
+  - 0.6
+  - 0.65
+  - 0.7
+  selection_metric: f1
+  bootstrap_samples: 250
+backtest:
+  entry_z: 1.5
+  exit_z: 0.25
+  stop_z: 3.0
+  max_holding_days: 20
+  transaction_cost_bps_per_leg: 2.0
+  slippage_bps_per_leg: 1.0
+  annual_risk_free_rate: 0.0
+  annualization_factor: 252
+  bootstrap_samples: 250
+  bootstrap_block_length: 10
+synthetic:
+  n_scenarios: 30
+  scenario_length: 252
+  seed: 42
+  regimes:
+    calm:
+      volatility_multiplier: 0.75
+      mean_reversion_multiplier: 1.25
+      jump_probability_multiplier: 0.5
+      jump_size_multiplier: 0.75
+      long_run_mean_shift_std: 0.0
+    high_volatility:
+      volatility_multiplier: 1.6
+      mean_reversion_multiplier: 0.9
+      jump_probability_multiplier: 1.2
+      jump_size_multiplier: 1.2
+      long_run_mean_shift_std: 0.1
+    jump:
+      volatility_multiplier: 1.2
+      mean_reversion_multiplier: 0.8
+      jump_probability_multiplier: 4.0
+      jump_size_multiplier: 2.5
+      long_run_mean_shift_std: 0.15
+    weak_mean_reversion:
+      volatility_multiplier: 1.1
+      mean_reversion_multiplier: 0.3
+      jump_probability_multiplier: 1.0
+      jump_size_multiplier: 1.0
+      long_run_mean_shift_std: 0.25
+    stress:
+      volatility_multiplier: 2.2
+      mean_reversion_multiplier: 0.2
+      jump_probability_multiplier: 5.0
+      jump_size_multiplier: 3.0
+      long_run_mean_shift_std: 0.75
+outputs:
+  dir: outputs_m7_public
+m7:
+  walk_forward:
+    initial_train_days: 756
+    validation_days: 252
+    test_days: 252
+    step_days: 252
+    max_folds: 3
+    algorithms:
+    - logistic_regression
+    - random_forest
+    - gradient_boosting
+  significance_sensitivity_levels:
+  - 0.1
+  - 0.05
+  cost_sensitivity_bps_per_leg:
+  - 1.0
+  - 2.0
+  - 4.0
+  slippage_sensitivity_bps_per_leg:
+  - 0.5
+  - 1.0
+  - 2.0
+  entry_z_sensitivity:
+  - 1.25
+  - 1.5
+  - 1.75
+  max_holding_sensitivity:
+  - 10
+  - 20
+  - 40
+  subperiods: 3
+deep_learning:
+  sequence_length: 20
+  hidden_size: 16
+  num_layers: 1
+  dropout: 0.1
+  epochs: 80
+  patience: 12
+  batch_size: 16
+  learning_rate: 0.003
+  weight_decay: 0.001
+  min_samples_per_split: 10
+advanced_learning:
+  lstm_hidden_size: 16
+  tcn_channels: 16
+  tcn_kernel_size: 3
+  tcn_dropout: 0.1
+  regime_quantile: 0.75
+  min_regime_validation_samples: 5
+  consensus_vote_grid:
+  - 3
+  - 4
+  - 5
+  expert_models:
+  - random_forest
+  - deep_mlp
+  - gru
+  - lstm
+  - tcn

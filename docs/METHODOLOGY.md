@@ -124,3 +124,40 @@ The same frozen hedge ratio, selected model, probability threshold, and backtest
 ## 9. Interpretation rule
 
 Strong classification metrics do not establish a profitable strategy. Model metrics and economic metrics are reported separately. A model is considered useful only when its validation-selected implementation improves economically meaningful test-period and robustness outcomes after costs.
+
+## 10. Deterministic regression orientation
+
+The Engle-Granger regression and its residual diagnostics are directional in finite samples. To prevent a cached CSV column order or configuration ticker order from changing results, every unordered candidate pair is converted to a canonical alphabetical orientation before OLS/Engle-Granger estimation. This is a reproducibility control, not a test-period optimization, and is verified by a unit test that reverses all input columns and confirms identical screening results.
+
+## 11. Walk-forward analysis
+
+The final study supplements the fixed chronological split with expanding-window walk-forward validation. Each fold independently repeats:
+
+1. pair screening and multiple-testing control on the fold training window;
+2. intercept and hedge-ratio estimation using only that training window;
+3. lagged feature construction and convergence labeling;
+4. validation-only model and probability-threshold selection across logistic regression, random forest and gradient boosting;
+5. untouched out-of-sample trading evaluation.
+
+No future test observations are used to choose the pair, hedge ratio, classifier, or probability threshold.
+
+## 12. Independent backtest verification
+
+The primary backtester uses daily position accounting. A second, independent trade-replay engine reconstructs PnL directly from entry spread, exit spread, direction, and round-trip costs. Exact trade-count and PnL agreement is used as an implementation-validation check. This fulfills the final-project request for a second backtest implementation without introducing a heavy external backtesting dependency.
+
+## 13. Sensitivity analysis
+
+The final pipeline evaluates:
+
+- 10% versus 5% cointegration/FDR significance specifications;
+- alternative entry thresholds;
+- transaction-cost/slippage levels;
+- maximum holding periods;
+- a shorter convergence-label horizon;
+- chronological test subperiods.
+
+These are robustness analyses. They are not used to retroactively select the best test-period specification.
+
+## 14. Final interpretation rule
+
+A pair can pass statistical cointegration screens and still lose money, while a profitable historical period may not demonstrate incremental ML value. Accordingly, the report separately answers three questions: (1) did the pair satisfy the statistical screen, (2) was the out-of-sample trading path profitable after costs, and (3) did the validation-selected ML filter improve that path relative to the classical baseline?

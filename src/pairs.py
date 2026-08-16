@@ -43,7 +43,19 @@ def _i1_diagnostic(log_price: pd.Series) -> tuple[float, float, bool]:
     return level_p, diff_p, plausible
 
 
-def screen_pairs(training_prices: pd.DataFrame, cfg: dict) -> tuple[pd.DataFrame, dict]:
+def _canonical_pair(asset_a: str, asset_b: str) -> tuple[str, str]:
+    """Return a deterministic orientation for an unordered candidate pair.
+
+    Engle-Granger and OLS residual diagnostics are not numerically identical when
+    the dependent/independent variables are swapped in finite samples.  Using a
+    canonical ticker ordering prevents cached CSV column order or YAML ticker
+    order from silently changing the research result.
+    """
+    a, b = str(asset_a), str(asset_b)
+    return (a, b) if a <= b else (b, a)
+
+
+def screen_pairs(training_prices: pd.DataFrame, cfg: dict, return_all: bool = False) -> tuple[pd.DataFrame, dict]:
     """Screen pairs only on the training/pair-selection window.
 
     The function reports all tests, applies Benjamini-Hochberg FDR to Engle-Granger p-values,
@@ -52,7 +64,28 @@ def screen_pairs(training_prices: pd.DataFrame, cfg: dict) -> tuple[pd.DataFrame
     pcfg = cfg["pair_selection"]
     returns = training_prices.pct_change().dropna()
     rows: list[dict] = []
-    for asset_a, asset_b in combinations(training_prices.columns, 2):
+    configured_pairs = pcfg.get("candidate_pairs")
+    if configured_pairs:
+        requested: list[tuple[str, str]] = []
+        available = set(training_prices.columns)
+        for pair in configured_pairs:
+            if isinstance(pair, str):
+                parts = pair.replace("/", "-").split("-")
+            else:
+                parts = list(pair)
+            if len(parts) != 2:
+                raise ValueError(f"Invalid candidate pair specification: {pair!r}")
+            asset_a, asset_b = _canonical_pair(str(parts[0]), str(parts[1]))
+            if asset_a not in available or asset_b not in available:
+                continue
+            requested.append((asset_a, asset_b))
+        # Preserve user-specified order while removing accidental duplicates.
+        pair_iterator = list(dict.fromkeys(requested))
+    else:
+        unordered = (_canonical_pair(a, b) for a, b in combinations(training_prices.columns, 2))
+        pair_iterator = list(dict.fromkeys(unordered))
+
+    for asset_a, asset_b in pair_iterator:
         pair = training_prices[[asset_a, asset_b]].dropna()
         if len(pair) < 120:
             continue
@@ -144,7 +177,7 @@ def screen_pairs(training_prices: pd.DataFrame, cfg: dict) -> tuple[pd.DataFrame
         "selected_asset_a": str(passing.iloc[0]["asset_a"]),
         "selected_asset_b": str(passing.iloc[0]["asset_b"]),
     }
-    return selected_table, summary
+    return (table if return_all else selected_table), summary
 
 
 def estimate_half_life(spread: pd.Series) -> float:
