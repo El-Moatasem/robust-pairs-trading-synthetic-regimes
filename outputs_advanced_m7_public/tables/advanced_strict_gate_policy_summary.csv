@@ -1,8 +1,8 @@
 policy,aggregate_strict_gate_pnl,positive_valid_pair_folds,negative_valid_pair_folds,valid_pair_folds,no_trade_folds,nonnegative_all_observed_folds,positive_in_every_valid_pair_fold,observed_gated_robustness
 random_forest,0.14850503988233363,2,0,2,1,True,True,True
-deep_mlp,0.11103079480111462,2,0,2,1,True,True,True
-uncertainty_consensus,0.10039313466380531,1,1,2,1,False,False,False
-lstm,-0.007576653079700221,1,1,2,1,False,False,False
-regime_mixture_of_experts,-0.03488298763950587,1,1,2,1,False,False,False
-gru,-0.07948469439521426,1,1,2,1,False,False,False
-tcn,-0.11837322531761493,1,1,2,1,False,False,False
+uncertainty_consensus,0.12794320485525534,2,0,2,1,True,True,True
+deep_mlp,0.11103079480111507,2,0,2,1,True,True,True
+lstm,0.0705669922794645,1,1,2,1,False,False,False
+regime_mixture_of_experts,-0.07533660446979852,1,1,2,1,False,False,False
+gru,-0.07948469439521337,1,1,2,1,False,False,False
+tcn,-0.14996878039027825,1,1,2,1,False,False,False

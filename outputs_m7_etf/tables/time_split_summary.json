@@ -1,0 +1,22 @@
+{
+  "train_index": 706,
+  "validation_index": 275,
+  "test_index": 428,
+  "pair_selection_end": "2023-08-03",
+  "train_end": "2023-08-03",
+  "validation_start": "2023-08-22",
+  "validation_end": "2024-09-24",
+  "test_start": "2024-10-11",
+  "test_end": "2026-06-29",
+  "purge_horizon_days": 10,
+  "embargo_days": 2,
+  "labeled_signals_total": 169,
+  "train_signals": 76,
+  "validation_signals": 32,
+  "test_signals": 58,
+  "train_prevalence": 0.0,
+  "validation_prevalence": 0.0,
+  "test_prevalence": 0.0,
+  "model_selection_basis": "highest f1 on validation only",
+  "selected_model": "dummy_majority"
+}
