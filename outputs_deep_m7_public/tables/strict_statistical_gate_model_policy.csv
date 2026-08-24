@@ -1,9 +1,9 @@
 fold,pair,model,pair_passes_all,original_pnl,strict_gate_pnl,strict_gate_trades
 1,CVX-XOM,logistic_regression,True,-0.08030314195363285,-0.08030314195363285,True
 1,CVX-XOM,random_forest,True,0.047781080810898394,0.047781080810898394,True
-1,CVX-XOM,gradient_boosting,True,-0.0008354671134277701,-0.0008354671134277701,True
-1,CVX-XOM,deep_mlp,True,0.01030683572967939,0.01030683572967939,True
-1,CVX-XOM,gru,True,-0.1802086534666495,-0.1802086534666495,True
+1,CVX-XOM,gradient_boosting,True,-0.0008354671134282142,-0.0008354671134282142,True
+1,CVX-XOM,deep_mlp,True,0.010306835729679834,0.010306835729679834,True
+1,CVX-XOM,gru,True,-0.1802086534666486,-0.1802086534666486,True
 2,CVX-XOM,logistic_regression,True,0.10072395907143523,0.10072395907143523,True
 2,CVX-XOM,random_forest,True,0.10072395907143523,0.10072395907143523,True
 2,CVX-XOM,gradient_boosting,True,0.10285761142862247,0.10285761142862247,True
@@ -13,4 +13,4 @@ fold,pair,model,pair_passes_all,original_pnl,strict_gate_pnl,strict_gate_trades
 3,KO-PEP,random_forest,False,-0.0611619661151878,0.0,False
 3,KO-PEP,gradient_boosting,False,-0.030681692850365216,0.0,False
 3,KO-PEP,deep_mlp,False,-0.00385426457496341,0.0,False
-3,KO-PEP,gru,False,-0.06381315725419291,0.0,False
+3,KO-PEP,gru,False,-0.007930501305145391,0.0,False

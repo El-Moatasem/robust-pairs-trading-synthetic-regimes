@@ -1,0 +1,3 @@
+primary_trade_count,independent_trade_count,primary_trade_pnl,independent_trade_pnl,absolute_pnl_difference,trade_count_match,pnl_match_within_1e_10,strategy
+33,33,-0.038917362130275544,-0.038917362130275544,0.0,True,True,baseline
+0,0,0.0,0.0,0.0,True,True,dummy_majority

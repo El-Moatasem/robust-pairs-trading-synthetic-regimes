@@ -1,0 +1,7 @@
+{
+  "pairs_tested": 8,
+  "pairs_passing_all": 2,
+  "selection_status": "passed_all_conservative_filters",
+  "selected_asset_a": "IVV",
+  "selected_asset_b": "VOO"
+}

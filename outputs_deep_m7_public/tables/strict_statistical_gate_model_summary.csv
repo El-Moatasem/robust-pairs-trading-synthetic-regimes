@@ -1,6 +1,6 @@
 model,aggregate_strict_gate_pnl,negative_folds,positive_folds,no_trade_folds,profitable_valid_pair_folds,valid_pair_folds,nonnegative_in_all_observed_folds
 random_forest,0.14850503988233363,0,2,1,2,2,True
-deep_mlp,0.11103079480111462,0,2,1,2,2,True
-gradient_boosting,0.1020221443151947,1,1,1,1,2,False
+deep_mlp,0.11103079480111507,0,2,1,2,2,True
+gradient_boosting,0.10202214431519425,1,1,1,1,2,False
 logistic_regression,0.020420817117802387,1,1,1,1,2,False
-gru,-0.07948469439521426,1,1,1,1,2,False
+gru,-0.07948469439521337,1,1,1,1,2,False

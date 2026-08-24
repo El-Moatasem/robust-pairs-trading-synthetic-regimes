@@ -5,34 +5,35 @@
     {
       "fold": 1,
       "pair": "CVX-XOM",
-      "policy": "uncertainty_consensus",
-      "validation_f1": 0.6,
-      "pnl": -0.0003308244076299198,
-      "sharpe": -0.0064747533532906265,
+      "policy": "regime_mixture_of_experts",
+      "validation_f1": 0.48148148148148145,
+      "pnl": -0.19870488242243511,
+      "sharpe": -1.5850762177816824,
       "pair_passes_all": true
     },
     {
       "fold": 2,
       "pair": "CVX-XOM",
       "policy": "regime_mixture_of_experts",
-      "validation_f1": 0.7741935483870968,
-      "pnl": 0.16382189478293013,
-      "sharpe": 1.5899114375321348,
+      "validation_f1": 0.7222222222222222,
+      "pnl": 0.12336827795263659,
+      "sharpe": 1.1641571057703555,
       "pair_passes_all": true
     },
     {
       "fold": 3,
       "pair": "KO-PEP",
       "policy": "regime_mixture_of_experts",
-      "validation_f1": 0.5217391304347826,
-      "pnl": -0.021133354830047708,
-      "sharpe": -0.246300785352789,
+      "validation_f1": 0.4931506849315068,
+      "pnl": -0.014468064197918757,
+      "sharpe": -0.17035301462083338,
       "pair_passes_all": false
     }
   ],
   "observed_gated_robustness_definition": "A fixed policy has positive PnL in every fold where the statistical pair gate passes, and stays flat in rejected folds. This is an observed robustness result, not a universal future guarantee.",
   "observed_gated_robust_policies": [
     "random_forest",
+    "uncertainty_consensus",
     "deep_mlp"
   ],
   "external_replication_required_for_universal_claim": true
