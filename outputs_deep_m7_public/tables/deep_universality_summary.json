@@ -4,21 +4,21 @@
   "universal_solution_found": false,
   "positive_pnl_folds": 1,
   "positive_sharpe_folds": 1,
-  "noninferior_to_baseline_folds": 2,
+  "noninferior_to_baseline_folds": 3,
   "selected_models": [
     {
       "fold": 1,
       "pair": "CVX-XOM",
       "model": "gradient_boosting",
       "validation_f1": 0.6046511627906976,
-      "pnl": -0.0008354671134277701,
-      "sharpe": -0.010441767112896535
+      "pnl": -0.0008354671134282142,
+      "sharpe": -0.01044176711290203
     },
     {
       "fold": 2,
       "pair": "CVX-XOM",
       "model": "gru",
-      "validation_f1": 0.5714285714285714,
+      "validation_f1": 0.5581395348837209,
       "pnl": 0.10072395907143523,
       "sharpe": 0.9013905839658117
     },
@@ -26,9 +26,9 @@
       "fold": 3,
       "pair": "KO-PEP",
       "model": "gru",
-      "validation_f1": 0.4383561643835616,
-      "pnl": -0.06381315725419291,
-      "sharpe": -0.7163212692653647
+      "validation_f1": 0.463768115942029,
+      "pnl": -0.007930501305145391,
+      "sharpe": -0.09143873979244098
     }
   ]
 }

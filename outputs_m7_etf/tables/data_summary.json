@@ -1,0 +1,11 @@
+{
+  "source": "cached_public_adjusted_close:data/raw/etf_prices.csv",
+  "mode_requested": "public",
+  "is_synthetic": false,
+  "fallback_reason": null,
+  "frequency": "daily",
+  "n_assets": 13,
+  "n_observations": 1433,
+  "start": "2020-10-13",
+  "end": "2026-06-29"
+}

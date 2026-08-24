@@ -2,9 +2,9 @@
   "pair": "CVX-XOM",
   "pair_status": "passed_all",
   "pair_passes_all": true,
-  "baseline_pnl": -0.02095194954469339,
-  "baseline_sharpe": -0.15420673726405723,
+  "baseline_pnl": -0.020951949544695165,
+  "baseline_sharpe": -0.1542067372640708,
   "validation_selected_model": "gru",
-  "selected_model_pnl": -0.02095194954469339,
-  "selected_model_sharpe": -0.15420673726405723
+  "selected_model_pnl": -0.020951949544695165,
+  "selected_model_sharpe": -0.1542067372640708
 }

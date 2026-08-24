@@ -1,0 +1,10 @@
+feature,importance
+signal_zscore,0.0
+abs_zscore,0.0
+spread_change_lagged,0.0
+spread_volatility,0.0
+rolling_corr,0.0
+spread_drawdown,0.0
+half_life,0.0
+deviation_persistence,0.0
+regime_stress_proxy,0.0

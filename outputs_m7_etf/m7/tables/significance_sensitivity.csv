@@ -1,0 +1,3 @@
+significance_level,pairs_tested,pairs_passing_all,selected_pair,selected_passes_all,eg_pvalue,residual_adf_pvalue,eg_fdr_pvalue
+0.1,8,2,IVV-VOO,True,6.634337822406617e-17,3.167062892999031e-18,5.307470257925293e-16
+0.05,8,1,IVV-VOO,True,6.634337822406617e-17,3.167062892999031e-18,5.307470257925293e-16

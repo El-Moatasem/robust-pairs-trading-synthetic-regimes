@@ -1,0 +1,3 @@
+fold,pair,test_start,test_end,eg_pvalue,residual_adf_pvalue,fdr_pvalue_single_hypothesis,passes_i1,estimated_half_life_days,selected_model,test_auc,baseline_pnl,baseline_sharpe,ml_pnl,ml_sharpe,ml_trades,ml_win_rate,profitable_test
+1,IVV-VOO,2024-10-18,2025-10-17,8.382964239418656e-18,5.2713271584311645e-19,8.382964239418656e-18,True,0.7816711427795191,dummy_majority,,-0.0211654340881952,-4.083574855219741,0.0,0.0,0,0.0,False
+1,AGG-BND,2024-10-18,2025-10-17,0.062396621868851816,0.001174113567111555,0.062396621868851816,True,3.7132596264052213,logistic_regression,,-0.017184096906947374,-3.5820538506189665,0.0,0.0,0,0.0,False
