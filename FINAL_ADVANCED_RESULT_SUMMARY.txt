@@ -34,40 +34,41 @@ Unique statistically valid real pair: CVX-XOM.
 Fold 1:
 - Random forest: +0.047781, Sharpe +0.734049.
 - Deep MLP: +0.010307, Sharpe +0.136817.
+- Uncertainty consensus: +0.027219, Sharpe +0.435288.
 Fold 2:
 - Random forest: +0.100724, Sharpe +0.901391.
 - Deep MLP: +0.100724, Sharpe +0.901391.
 - GRU: +0.100724, Sharpe +0.901391.
 - LSTM: +0.100724, Sharpe +0.901391.
-- TCN: +0.061835, Sharpe +0.816544.
-- Regime mixture-of-experts: +0.163822, Sharpe +1.589911.
+- TCN: +0.030240, Sharpe +0.379803.
+- Regime mixture-of-experts: +0.123368, Sharpe +1.164157.
 - Uncertainty consensus: +0.100724, Sharpe +0.901391.
 
 Validation-selected advanced policy
 -----------------------------------
-Fold 1: uncertainty consensus; PnL -0.000331; Sharpe -0.006475; pair passes.
-Fold 2: regime mixture-of-experts; PnL +0.163822; Sharpe +1.589911; pair passes.
-Fold 3: regime mixture-of-experts; PnL -0.021133; Sharpe -0.246301; pair fails/provisional.
+Fold 1: regime mixture-of-experts; PnL -0.198705; Sharpe -1.585076; pair passes.
+Fold 2: regime mixture-of-experts; PnL +0.123368; Sharpe +1.164157; pair passes.
+Fold 3: regime mixture-of-experts; PnL -0.014468; Sharpe -0.170353; pair fails/provisional.
 Under the strict pair gate, fold 3 is no-trade / flat.
 
 Strict statistical-gate fixed policies
 --------------------------------------
 - Random forest: aggregate gated PnL +0.148505; positive in both valid-pair folds; 0 negative; 1 no-trade.
+- Uncertainty consensus: aggregate gated PnL +0.127943; positive in both valid-pair folds; 0 negative; 1 no-trade.
 - Deep MLP: aggregate gated PnL +0.111031; positive in both valid-pair folds; 0 negative; 1 no-trade.
-- Uncertainty consensus: +0.100393 aggregate, but one valid fold is negative.
-- LSTM: -0.007577 aggregate.
-- Regime MoE: -0.034883 aggregate.
+- LSTM: +0.070567 aggregate.
+- Regime MoE: -0.075337 aggregate.
 - GRU: -0.079485 aggregate.
-- TCN: -0.118373 aggregate.
+- TCN: -0.149969 aggregate.
 
 Universal solution
 ------------------
 Strict universal validation-selected ML/DL solution demonstrated: NO.
 Newer sequence/regime methods improve some windows but not every statistically valid fold.
-The strongest observed cross-fold candidate remains:
+The observed gated-robust policies are fixed random forest, uncertainty consensus, and fixed deep MLP. The simpler candidate deployment architecture remains:
   statistical pair gate -> fixed random forest or fixed deep MLP -> trade only validated signals -> otherwise remain flat.
 This is observed historical robustness, not a universal future-profit guarantee.
 
 ETF external replication
 ------------------------
-The ETF experiment is fully code-ready for the advanced methods, but no ETF numerical result is fabricated because a verified ETF cache/network was unavailable in the build environment.
+The ETF experiment completed on verified public data (`Synthetic data: False`). IVV-VOO passes all configured screens in the available walk-forward fold, but the training labels contain no positive class. The dummy-majority fallback rejects all signals and remains flat with PnL 0.0 and Sharpe 0.0. The result supports abstention but does not establish profitable or universal external replication.
