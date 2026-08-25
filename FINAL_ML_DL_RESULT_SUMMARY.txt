@@ -54,6 +54,6 @@ Positive raw-diagnostic cases are exploratory rather than statistically validate
 
 ETF external replication
 ------------------------
-The code is ready for strict real-data tests of:
+The strict real-data experiment tests:
 SPY-IVV, SPY-VOO, IVV-VOO, QQQ-QQQM, GLD-IAU, IWM-VTWO, VTI-ITOT, AGG-BND.
-No ETF numerical result is fabricated because a verified ETF cache was not available in the build environment.
+The verified run selects IVV-VOO, which passes all configured screens in the available walk-forward fold. Because the training labels contain no positive class, the dummy-majority fallback rejects all signals and remains flat with PnL 0.0 and Sharpe 0.0. This supports abstention but does not establish profitable external replication.

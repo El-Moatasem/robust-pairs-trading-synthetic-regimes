@@ -70,9 +70,10 @@ Under the pre-declared criterion (positive PnL and Sharpe in every fold, never b
 A second policy stays flat whenever no pair passes every configured screen. This prevents trading the provisional fold-3 pair.
 
 - Fixed random forest: aggregate observed gated PnL 0.148505; positive in both valid-pair folds; no trade in fold 3; zero negative observed folds.
+- Uncertainty consensus: aggregate observed gated PnL 0.127943; positive in both valid-pair folds; no trade in fold 3; zero negative observed folds.
 - Fixed deep MLP: aggregate observed gated PnL 0.111031; positive in both valid-pair folds; no trade in fold 3; zero negative observed folds.
 
-This is the strongest stability result in the current study. It is a promising candidate architecture, not proof of universal future profitability, because only two folds contain a statistically valid pair and external ETF replication remains pending.
+These are the observed gated-robust policies in the current study. The simpler fixed-model architecture remains a promising deployment candidate, not proof of universal future profitability, because only two folds contain a statistically valid pair and the completed ETF replication does not establish positive profitability.
 
 ## 6. Exhaustive 45-pair genuine public walk-forward screen
 
@@ -88,12 +89,12 @@ This is the strongest stability result in the current study. It is a promising c
 
 ## 8. Economically pre-specified ETF replication
 
-The final source includes a strict real-data replication for SPY-IVV, SPY-VOO, IVV-VOO, QQQ-QQQM, GLD-IAU, IWM-VTWO, VTI-ITOT, and AGG-BND, including ML/DL walk-forward code. No ETF numerical result is asserted in the packaged report because a verified ETF cache was not available in the artifact-build environment. Strict mode fails rather than substituting synthetic data.
+The final source includes a strict real-data replication for SPY-IVV, SPY-VOO, IVV-VOO, QQQ-QQQM, GLD-IAU, IWM-VTWO, VTI-ITOT, and AGG-BND. The verified public-data run selects IVV-VOO, which passes all configured screens in the available walk-forward fold. The supervised training labels contain no positive class, so the dummy-majority fallback rejects every signal and remains flat with PnL 0.0 and Sharpe 0.0. This supports abstention but does not establish profitable external replication. Strict mode fails rather than substituting synthetic data when verified public data are unavailable.
 
 ## Final conclusion
 
-The project demonstrates genuine historically profitable, statistically passed CVX-XOM cases, and the deep-learning extension adds further profitable model-filtered cases. It does **not** demonstrate a universal validation-selected ML/DL alpha engine. The strongest current research design is a strict statistical gate plus a fixed nonlinear filter: trade statistically valid opportunities and remain flat when the screen fails, while requiring additional external and longer-horizon validation before production deployment.
+The project demonstrates genuine historically profitable, statistically passed CVX-XOM cases, and the deep-learning extension adds further profitable model-filtered cases. It does **not** demonstrate a universal validation-selected ML/DL alpha engine. Fixed random forest, uncertainty consensus, and fixed deep MLP meet the observed gated-robustness criterion. The simpler candidate research architecture remains a strict statistical gate plus a fixed nonlinear filter: trade statistically valid opportunities and remain flat when the screen fails, while requiring additional external and longer-horizon validation before production deployment.
 
 ## Advanced ML/DL result update
 
-The final advanced extension is documented in `docs/ADVANCED_LEARNING_RESULTS.md`. The key result is that additional model complexity does not produce a universal solution. The fold-2 regime-aware mixture-of-experts achieves PnL `0.163822` and Sharpe `1.589911`, but loses in fold 1. The strict statistical-gate fixed random forest and deep MLP remain the only tested fixed policies that are positive in both statistically valid CVX-XOM folds and flat in the rejected third fold.
+The final advanced extension is documented in `docs/ADVANCED_LEARNING_RESULTS.md`. The key result is that additional model complexity does not produce a universal solution. The fold-2 regime-aware mixture-of-experts achieves PnL `0.123368` and Sharpe `1.164157`, but loses in fold 1. Under the strict statistical gate, fixed random forest, uncertainty consensus, and fixed deep MLP are positive in both statistically valid CVX-XOM folds and flat in the rejected third fold.

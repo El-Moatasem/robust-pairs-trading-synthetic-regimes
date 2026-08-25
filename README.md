@@ -2,7 +2,7 @@
 
 Final MScFE 690 capstone implementation by **El Moatasem Madani and Henry A. Sada** (Group 16021).
 
-The research asks whether machine learning and deep learning can improve a classical cointegration-based pairs-trading strategy by acting as a **signal-quality filter** rather than a raw-price forecaster. The repository contains deterministic synthetic experiments, genuine public-market experiments, leakage controls, independent backtest validation, walk-forward analysis, sensitivity analysis, deep neural-network and GRU comparisons, and report-ready exploratory diagnostics.
+The research asks whether machine learning and deep learning can improve a classical cointegration-based pairs-trading strategy by acting as a **signal-quality filter** rather than a raw-price forecaster. The repository contains deterministic synthetic experiments, genuine public-market experiments, leakage controls, independent backtest validation, walk-forward analysis, sensitivity analysis, a deep MLP, GRU, LSTM, causal TCN, a training-defined regime mixture-of-experts, an uncertainty-aware consensus/abstention policy, and report-ready exploratory diagnostics.
 
 ## Final research position
 
@@ -13,9 +13,9 @@ The final code does **not** claim a universally profitable ML/DL strategy. The f
 - Fold 1 passes the five-hypothesis screen. The original validation-selected ML result was not profitable, but the expanded DL comparison finds positive OOS results for random forest and the fixed deep MLP in that fold. Fold 3 does not pass the full pair screen.
 
 - In the DL-extended five-pair walk-forward experiment, **CVX-XOM is the only pair that passes every configured screen, in folds 1 and 2**. Random forest and the fixed deep MLP both generate positive OOS PnL in fold 1; every tested ML/DL filter is positive in fold 2. The validation-selected cross-model winner is still not universally profitable across all folds.
-- A strict statistical-gate policy (stay flat whenever no pair passes every screen) is non-negative across all three observed folds for the fixed random forest and fixed deep MLP. The deep MLP produces aggregate gated PnL **0.1110** across the three folds (positive in both valid-pair folds and no trade in fold 3). This is an encouraging observed stability result, **not proof of universal future profitability**.
+- A strict statistical-gate policy stays flat whenever no pair passes every screen. Under this gate, fixed random forest, uncertainty consensus, and fixed deep MLP are positive in both valid-pair folds and flat in fold 3. Their aggregate gated PnL values are **0.1485**, **0.1279**, and **0.1110**, respectively. This is an encouraging observed stability result, **not proof of universal future profitability**.
 - An additional **exhaustive 45-pair walk-forward screen** tests every unordered combination of the original 10 real tickers in each of three folds (135 pair-fold hypotheses). No case survives the BH-FDR gate when correction is applied across all 45 pairs in a fold. Some raw-diagnostic cases have positive OOS PnL, but these are explicitly labeled exploratory because they fail the global multiple-testing gate.
-- A final **economically pre-specified ETF replication** is encoded separately using SPY-IVV, SPY-VOO, IVV-VOO, QQQ-QQQM, GLD-IAU, IWM-VTWO, VTI-ITOT, and AGG-BND. It runs only on real public data in strict mode and never substitutes synthetic data.
+- A final **economically pre-specified ETF replication** uses SPY-IVV, SPY-VOO, IVV-VOO, QQQ-QQQM, GLD-IAU, IWM-VTWO, VTI-ITOT, and AGG-BND. On verified public data, IVV-VOO passes all configured screens in the available walk-forward fold. The supervised labels contain no positive class, so the dummy-majority fallback rejects all signals and remains flat. This supports abstention but does not establish profitable external replication.
 - The independent trade-replay backtest reproduces the primary engine's trade counts and PnL to numerical precision.
 - Synthetic regimes show no universal ML advantage; the ML filter is most useful as a robustness/risk-control research layer rather than a guaranteed alpha source.
 
@@ -45,6 +45,8 @@ src/synthetic.py                   Calibrated synthetic regime analysis
 scripts/run_m7_analysis.py         M7/final robustness orchestrator
 scripts/run_deep_learning_analysis.py  Deep MLP + GRU fixed-split/walk-forward experiments
 scripts/summarize_deep_results.py  Passed/profitable and universality summary
+scripts/run_advanced_learning_analysis.py  LSTM/TCN/regime/consensus robustness experiments
+scripts/summarize_advanced_results.py  Advanced policy and strict-gate summary
 scripts/run_exhaustive_public_walkforward.py  All 45 original real pairs across walk-forward folds
 scripts/summarize_etf_results.py   Summarize strict real-ETF replication
 scripts/run_all_final_experiments.py  Convenience runner for final experiment suite
@@ -59,6 +61,10 @@ outputs_exhaustive_public/          45-pair real-data walk-forward screening/res
 outputs_deep_synthetic/              Synthetic deep-learning comparison
 outputs_deep_public/                 Full-public fixed-split deep-learning comparison
 outputs_deep_m7_public/              ML/DL walk-forward, strict-gate, universality results
+outputs_advanced_synthetic/          Synthetic LSTM/TCN comparison
+outputs_advanced_public/             Full-public advanced fixed-split comparison
+outputs_advanced_m7_public/          Advanced walk-forward and strict-gate results
+outputs_m7_etf/                      Verified strict real-ETF replication outputs
 docs/                               Methodology, run guide, solution design, final findings
 ```
 
@@ -190,15 +196,16 @@ Key outputs include `deep_passed_and_profitable.csv`, `deep_validation_selected_
 
 ## 6. Economically pre-specified real-ETF replication
 
-`config/config_m7_etf.yaml` tests economically close ETF pairs such as SPY-IVV, SPY-VOO, QQQ-QQQM, GLD-IAU, VTI-ITOT and AGG-BND. These hypotheses are specified by economic exposure before test-period profitability is inspected. The final package does **not** contain fabricated ETF results: if the real ETF cache is absent and Yahoo Finance is unavailable, strict mode stops. Numerical ETF findings should be added to the report only after a verified `Synthetic data: False` run.
+`config/config_m7_etf.yaml` tests economically close ETF pairs such as SPY-IVV, SPY-VOO, QQQ-QQQM, GLD-IAU, VTI-ITOT and AGG-BND. These hypotheses are specified by economic exposure before test-period profitability is inspected. The included verified cache at `data/raw/etf_prices.csv` produces `Synthetic data: False`. IVV-VOO passes all configured screens in the available walk-forward fold, but the training labels have no positive class. The dummy-majority fallback therefore rejects all signals and produces zero PnL and Sharpe.
 
 ```bash
-rm -f data/raw/etf_prices.csv
 python run_pipeline.py --config config/config_m7_etf.yaml --require-public-data
 python scripts/verify_outputs.py --outputs outputs_m7_etf
 python scripts/run_m7_analysis.py --config config/config_m7_etf.yaml --require-public-data
 python scripts/summarize_etf_results.py --outputs outputs_m7_etf
 ```
+
+To force a fresh public-data download, remove the cache only when network access is available. Strict mode stops rather than substituting synthetic data if neither a verified cache nor a successful download is available.
 
 ## 7. Run the final suite
 
@@ -279,6 +286,6 @@ python scripts/run_advanced_learning_analysis.py \
 python scripts/summarize_advanced_results.py --outputs outputs_advanced_m7_public
 ```
 
-The strongest single advanced test-period result is the fold-2 CVX-XOM **regime mixture-of-experts** result (PnL about `0.16382`, Sharpe about `1.5899`). It does not remain profitable in fold 1. Under the strict statistical gate, the most stable observed fixed policies remain **random forest** (aggregate gated PnL about `0.14851`) and **deep MLP** (about `0.11103`), each profitable in both statistically valid CVX-XOM folds and flat in the rejected third fold.
+The strongest single advanced test-period result is the fold-2 CVX-XOM **regime mixture-of-experts** result (PnL about `0.12337`, Sharpe about `1.1642`). It does not remain profitable in fold 1. The uncertainty-consensus policy is positive in fold 1 (PnL about `0.02722`, Sharpe about `0.4353`) and fold 2. Under the strict statistical gate, the observed gated-robust policies are **random forest** (aggregate gated PnL about `0.14851`), **uncertainty consensus** (about `0.12794`), and **deep MLP** (about `0.11103`). Each is profitable in both statistically valid CVX-XOM folds and flat in the rejected third fold.
 
 No universal ML/DL strategy is claimed. The package explicitly distinguishes a strict universal-profitability test from the weaker observed-gated-robustness result.
